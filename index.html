@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="hr" class="scroll-smooth light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autoklub Velika Gorica | Autoškola</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { hakBlue: '#004b87', hakYellow: '#ffc107' } } }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .canvas-container { width: 100%; height: 100%; touch-action: none; outline: none; }
+        .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; }
+        .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .theme-transition { transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; }
+        
+        #categoryModal { transition: opacity 0.3s ease, transform 0.3s ease; }
+        #categoryModal.hidden-modal { opacity: 0; pointer-events: none; transform: scale(0.95); }
+        #categoryModal.active-modal { opacity: 1; pointer-events: auto; transform: scale(1); }
+        
+        .game-btn { touch-action: none; user-select: none; -webkit-user-select: none; }
+        
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
+            50% { box-shadow: 0 0 0 15px rgba(255, 193, 7, 0); }
+        }
+        .btn-pulse { animation: pulse-glow 2s infinite; }
+        
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Custom Modern Scrollbar */
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 20px;
+            border: 3px solid transparent;
+            background-clip: content-box;
+        }
+        ::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+
+        /* Dark Mode Scrollbar Support */
+        .dark ::-webkit-scrollbar-thumb { background-color: #334155; }
+        .dark ::-webkit-scrollbar-thumb:hover { background-color: #475569; }
+
+        /* Firefox Fallback */
+        * { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+        .dark * { scrollbar-color: #334155 transparent; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 theme-transition antialiased selection:bg-hakYellow selection:text-black">
+
+    <header class="fixed top-0 w-full z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm theme-transition">
+        <div class="max-w-[90rem] mx-auto px-4 xl:px-6 py-4 flex justify-between items-center">
+            <div class="text-2xl font-extrabold tracking-tight">
+                <span class="text-hakBlue dark:text-blue-500">AK</span> Velika Gorica
+            </div>
+            <nav class="hidden lg:flex space-x-6 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                <a href="#pocetna" class="hover:text-hakBlue dark:hover:text-blue-400 transition">Početna</a>
+                <a href="#autoskola" class="hover:text-hakBlue dark:hover:text-blue-400 transition">Kategorije</a>
+                <a href="#o-nama" class="hover:text-hakBlue dark:hover:text-blue-400 transition">O nama</a>
+                <a href="#tim-i-vozila" class="hover:text-hakBlue dark:hover:text-blue-400 transition">Tim i vozila</a>
+                <a href="#simulator" class="hover:text-hakBlue dark:hover:text-blue-400 transition">Simulator</a>
+                <a href="#usluge" class="hover:text-hakBlue dark:hover:text-blue-400 transition">Usluge</a>
+            </nav>
+            <div class="flex items-center gap-4">
+                <button id="themeToggle" class="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">
+                    <svg id="sunIcon" class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    <svg id="moonIcon" class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                </button>
+                <a href="#kontakt" class="hidden sm:inline-block bg-hakBlue hover:bg-blue-800 dark:bg-blue-600 text-white px-6 py-2.5 rounded-full font-semibold transition shadow-md">UPIŠI SE</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section id="pocetna" class="relative pt-32 pb-20 lg:pt-40 lg:pb-32 max-w-[90rem] mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center min-h-[90vh]">
+            <div class="z-10">
+                <div class="inline-block bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 font-bold px-4 py-1.5 rounded-full text-sm mb-6 uppercase tracking-wide border border-yellow-200 dark:border-yellow-700/50">
+                    Prijave u tijeku
+                </div>
+                <h1 class="text-5xl lg:text-7xl font-extrabold leading-tight mb-6">
+                    Postani siguran vozač uz <span class="text-hakBlue dark:text-blue-400">najbolje u gradu.</span>
+                </h1>
+                <p class="text-lg text-slate-600 dark:text-slate-400 mb-8 max-w-lg leading-relaxed">
+                    Tečaj za osposobljavanje kandidata za vozače počinje u <strong>utorak, 2. lipnja 2026.</strong>
+                </p>
+                <div class="flex flex-wrap gap-4">
+                    <a href="#kontakt" class="bg-hakBlue hover:bg-blue-800 dark:bg-blue-600 text-white px-8 py-4 rounded-full font-bold text-lg transition shadow-lg">Započni upis</a>
+                    <a href="#autoskola" class="bg-white dark:bg-slate-800 hover:bg-slate-50 text-slate-700 dark:text-white border border-slate-300 dark:border-slate-600 px-8 py-4 rounded-full font-bold text-lg transition shadow-sm">Istraži kategorije</a>
+                </div>
+            </div>
+
+            <div class="relative w-full h-[500px] lg:h-[600px] z-10 bg-slate-100 dark:bg-slate-800/50 rounded-3xl overflow-hidden shadow-xl border border-slate-200 dark:border-slate-700 theme-transition">
+                <canvas id="heroCanvas" class="canvas-container"></canvas>
+                
+                <div id="introOverlay" class="absolute inset-0 flex flex-col items-center justify-end pb-12 bg-gradient-to-t from-slate-900/80 to-transparent z-20 transition-opacity duration-500 opacity-0 pointer-events-none">
+                    <p class="text-white font-bold mb-4 drop-shadow-md text-lg">Zanima te kako je to voziti?</p>
+                    <button id="btnStartGame" class="bg-hakYellow text-slate-900 px-8 py-4 rounded-full font-extrabold text-xl transition shadow-2xl flex items-center gap-3 hover:scale-105 btn-pulse pointer-events-auto">
+                        <span class="text-2xl">🎮</span> Probna vožnja
+                    </button>
+                </div>
+
+                <div id="gameOverlay" class="absolute inset-0 z-20 opacity-0 pointer-events-none flex flex-col justify-between p-4">
+                    <div class="flex justify-between items-start">
+                        <div class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-6 py-2 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700">
+                            <span class="text-slate-500 text-xs font-bold uppercase block">Zeleni bodovi</span>
+                            <span id="scoreDisplay" class="text-3xl font-extrabold text-green-500">0</span>
+                        </div>
+                        <button id="btnExitGame" class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-3 rounded-full shadow-lg text-slate-500 hover:text-red-500 hover:bg-slate-100 pointer-events-auto transition">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    <div class="hidden md:block text-center mt-auto mb-6">
+                        <span class="bg-slate-900/80 text-white px-5 py-3 rounded-full text-sm font-semibold backdrop-blur-md shadow-lg border border-slate-700/50">
+                            Koristi strelice ili W A S D za vožnju • Pokupi zelene kocke!
+                        </span>
+                    </div>
+                    <div class="md:hidden flex justify-between items-end w-full px-2 pb-2 mt-auto">
+                        <div class="flex gap-2">
+                            <button id="btnLeft" class="game-btn bg-slate-800/80 text-white backdrop-blur-md w-16 h-16 rounded-full shadow-lg active:bg-hakBlue pointer-events-auto text-2xl font-bold">←</button>
+                            <button id="btnRight" class="game-btn bg-slate-800/80 text-white backdrop-blur-md w-16 h-16 rounded-full shadow-lg active:bg-hakBlue pointer-events-auto text-2xl font-bold">→</button>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <button id="btnGas" class="game-btn bg-hakBlue text-white backdrop-blur-md w-16 h-16 rounded-full shadow-lg active:bg-blue-600 pointer-events-auto font-bold text-sm">GAS</button>
+                            <button id="btnBrake" class="game-btn bg-red-500/90 text-white backdrop-blur-md w-16 h-16 rounded-full shadow-lg active:bg-red-600 pointer-events-auto font-bold text-xs">KOČNICA</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="autoskola" class="py-24 bg-white dark:bg-slate-800/30 border-y border-slate-200 dark:border-slate-800 theme-transition">
+            <div class="max-w-[90rem] mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="text-4xl md:text-5xl font-extrabold mb-4">Kategorije vozila i Cjenik</h2>
+                    <p class="text-slate-600 dark:text-slate-400 text-lg">Odaberite kategoriju za detaljne informacije, cijene i 3D prikaz vozila.</p>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <button onclick="openModal('a1')" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-8 rounded-3xl text-center hover:border-hakBlue hover:-translate-y-1 shadow-sm transition">
+                        <h3 class="text-4xl font-extrabold mb-2">A1</h3><p class="text-sm text-slate-500">Motocikli do 125 cm3</p>
+                    </button>
+                    <button onclick="openModal('a2')" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-8 rounded-3xl text-center hover:border-hakBlue hover:-translate-y-1 shadow-sm transition">
+                        <h3 class="text-4xl font-extrabold mb-2">A2</h3><p class="text-sm text-slate-500">Motocikli do 35 kW</p>
+                    </button>
+                    <button onclick="openModal('a')" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-8 rounded-3xl text-center hover:border-hakBlue hover:-translate-y-1 shadow-sm transition">
+                        <h3 class="text-4xl font-extrabold mb-2">A</h3><p class="text-sm text-slate-500">Motocikli > 35 kW</p>
+                    </button>
+                    <button onclick="openModal('b')" class="bg-hakBlue text-white border border-hakBlue p-8 rounded-3xl text-center shadow-lg transform hover:-translate-y-1 transition relative overflow-hidden">
+                        <div class="absolute top-0 right-0 bg-hakYellow text-slate-900 text-xs font-bold px-3 py-1 rounded-bl-lg">Popularno</div>
+                        <h3 class="text-4xl font-extrabold mb-2">B</h3><p class="text-sm text-blue-200">Osobni automobili</p>
+                    </button>
+                    <button onclick="openModal('be')" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-8 rounded-3xl text-center hover:border-hakBlue hover:-translate-y-1 shadow-sm transition">
+                        <h3 class="text-4xl font-extrabold mb-2">B+E</h3><p class="text-sm text-slate-500">B s prikolicom</p>
+                    </button>
+                    <button onclick="openModal('c')" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-8 rounded-3xl text-center hover:border-hakBlue hover:-translate-y-1 shadow-sm transition">
+                        <h3 class="text-4xl font-extrabold mb-2">C</h3><p class="text-sm text-slate-500">Teretna vozila > 7.5t</p>
+                    </button>
+                    <button onclick="openModal('ce')" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-8 rounded-3xl text-center hover:border-hakBlue hover:-translate-y-1 shadow-sm transition">
+                        <h3 class="text-4xl font-extrabold mb-2">C+E</h3><p class="text-sm text-slate-500">Teretna s prikolicom</p>
+                    </button>
+                    <button onclick="openModal('kod96')" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-8 rounded-3xl text-center hover:border-hakBlue hover:-translate-y-1 shadow-sm transition">
+                        <h3 class="text-3xl font-extrabold mb-2 mt-1">Kod 96</h3><p class="text-sm text-slate-500">Osobno + prikolica</p>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="o-nama" class="py-24">
+            <div class="max-w-[90rem] mx-auto px-6">
+                <h2 class="text-3xl md:text-5xl font-extrabold mb-16 text-center">Zašto se odlučiti za nas?</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[1fr]">
+                    <div class="md:col-span-2 bg-white dark:bg-slate-800 p-10 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 hover:-translate-y-1 transition duration-300">
+                        <div class="text-6xl font-extrabold text-hakBlue dark:text-blue-500 mb-6">1954.</div>
+                        <h3 class="text-2xl font-bold mb-4">Tradicija i iskustvo</h3>
+                        <p class="text-slate-600 dark:text-slate-400 text-lg">Autoškola autokluba Velika Gorica je prva autoškola u Velikoj Gorici, osnovana u sklopu Automoto društva. Više od pola stoljeća kontinuiranog rada čini nas najpouzdanijim izborom.</p>
+                    </div>
+                    <div class="flex flex-col gap-6">
+                        <div class="flex-1 bg-white dark:bg-slate-800 p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
+                            <div class="text-4xl font-extrabold text-hakYellow mb-3">20,000+</div>
+                            <h3 class="text-lg font-bold mb-2">Osposobljenih vozača</h3>
+                        </div>
+                        <div class="flex-1 bg-white dark:bg-slate-800 p-8 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700">
+                            <div class="text-4xl font-extrabold text-hakBlue dark:text-blue-500 mb-3">#1</div>
+                            <h3 class="text-lg font-bold mb-2">Stručni kadar</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tim-i-vozila" class="py-24 bg-slate-100 dark:bg-slate-800/30 border-y border-slate-200 dark:border-slate-800 theme-transition">
+            <div class="max-w-[90rem] mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl md:text-5xl font-extrabold mb-4">Naš stručni tim</h2>
+                    <p class="text-slate-600 dark:text-slate-400 text-lg max-w-2xl mx-auto">Vrhunski instruktori, predavači i djelatnici s dugogodišnjim iskustvom.</p>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-24">
+                    
+                    <div class="bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-lg hover:-translate-y-1 transition duration-300">
+                        <div class="w-28 h-28 shrink-0 rounded-full mb-5 overflow-hidden shadow-md border-4 border-slate-50 dark:border-slate-700 bg-slate-200 dark:bg-slate-700">
+                            <img src="djelatnik.jpg" alt="Toni Lukačević" class="w-full h-full object-cover">
+                        </div>
+                        <h3 class="text-2xl font-extrabold mb-1">Toni Lukačević</h3>
+                        <p class="text-hakBlue dark:text-blue-400 font-semibold mb-6">Voditelj / Predavač</p>
+                        <div class="w-full space-y-3 text-sm bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl text-slate-700 dark:text-slate-300">
+                            <div class="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2"><span>Kategorije:</span> <span class="font-bold">A, B, C, CE</span></div>
+                            <div class="flex justify-between pt-1"><span>Kontakt:</span> <a href="tel:0959008227" class="font-bold hover:text-hakBlue">095/ 9008 227</a></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-lg hover:-translate-y-1 transition duration-300">
+                        <div class="w-28 h-28 shrink-0 rounded-full mb-5 overflow-hidden shadow-md border-4 border-slate-50 dark:border-slate-700 bg-slate-200 dark:bg-slate-700">
+                            <img src="djelatnik.jpg" alt="Srđan Borić" class="w-full h-full object-cover">
+                        </div>
+                        <h3 class="text-2xl font-extrabold mb-1">Srđan Borić</h3>
+                        <p class="text-hakBlue dark:text-blue-400 font-semibold mb-6">Instruktor vožnje</p>
+                        <div class="w-full space-y-3 text-sm bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl text-slate-700 dark:text-slate-300">
+                            <div class="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2"><span>Kategorije:</span> <span class="font-bold">A, B, C, CE</span></div>
+                            <div class="flex justify-between pt-1"><span>Kontakt:</span> <a href="tel:098867342" class="font-bold hover:text-hakBlue">098/ 8673 42</a></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-lg hover:-translate-y-1 transition duration-300">
+                        <div class="w-28 h-28 shrink-0 rounded-full mb-5 overflow-hidden shadow-md border-4 border-slate-50 dark:border-slate-700 bg-slate-200 dark:bg-slate-700">
+                            <img src="djelatnik.jpg" alt="Elvis Hadžić" class="w-full h-full object-cover">
+                        </div>
+                        <h3 class="text-2xl font-extrabold mb-1">Elvis Hadžić</h3>
+                        <p class="text-hakBlue dark:text-blue-400 font-semibold mb-6">Instruktor vožnje</p>
+                        <div class="w-full space-y-3 text-sm bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl text-slate-700 dark:text-slate-300">
+                            <div class="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2"><span>Kategorije:</span> <span class="font-bold">B, C, CE</span></div>
+                            <div class="flex justify-between pt-1"><span>Kontakt:</span> <a href="tel:0976441275" class="font-bold hover:text-hakBlue">097/ 644 1275</a></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-lg hover:-translate-y-1 transition duration-300">
+                        <div class="w-28 h-28 shrink-0 rounded-full mb-5 overflow-hidden shadow-md border-4 border-slate-50 dark:border-slate-700 bg-slate-200 dark:bg-slate-700">
+                            <img src="djelatnik.jpg" alt="Monika Turković" class="w-full h-full object-cover">
+                        </div>
+                        <h3 class="text-2xl font-extrabold mb-1">Monika Turković</h3>
+                        <p class="text-hakBlue dark:text-blue-400 font-semibold mb-6">Instruktor vožnje</p>
+                        <div class="w-full space-y-3 text-sm bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl text-slate-700 dark:text-slate-300">
+                            <div class="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2"><span>Kategorije:</span> <span class="font-bold">B</span></div>
+                            <div class="flex justify-between pt-1"><span>Kontakt:</span> <a href="tel:0958242927" class="font-bold hover:text-hakBlue">095/ 824 2927</a></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-lg hover:-translate-y-1 transition duration-300">
+                        <div class="w-28 h-28 shrink-0 rounded-full mb-5 overflow-hidden shadow-md border-4 border-slate-50 dark:border-slate-700 bg-slate-200 dark:bg-slate-700">
+                            <img src="djelatnik.jpg" alt="Vlado Vujnović" class="w-full h-full object-cover">
+                        </div>
+                        <h3 class="text-2xl font-extrabold mb-1">Vlado Vujnović</h3>
+                        <p class="text-hakBlue dark:text-blue-400 font-semibold mb-6">Instruktor vožnje</p>
+                        <div class="w-full space-y-3 text-sm bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl text-slate-700 dark:text-slate-300">
+                            <div class="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2"><span>Kategorije:</span> <span class="font-bold">B</span></div>
+                            <div class="flex justify-between pt-1"><span>Kontakt:</span> <a href="tel:0989730125" class="font-bold hover:text-hakBlue">098/ 9730 125</a></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-lg hover:-translate-y-1 transition duration-300">
+                        <div class="w-28 h-28 shrink-0 rounded-full mb-5 overflow-hidden shadow-md border-4 border-slate-50 dark:border-slate-700 bg-slate-200 dark:bg-slate-700">
+                            <img src="djelatnik.jpg" alt="Marija Vlatković" class="w-full h-full object-cover">
+                        </div>
+                        <h3 class="text-2xl font-extrabold mb-1">Marija Vlatković</h3>
+                        <p class="text-hakBlue dark:text-blue-400 font-semibold mb-6">Administracija</p>
+                        <div class="w-full flex-1 flex items-center justify-center text-sm text-slate-500 bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl">
+                            Uvijek tu za sva vaša pitanja oko upisa i dokumentacije.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl md:text-5xl font-extrabold mb-4">Naš vozni park</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 text-center">
+                        <h3 class="text-2xl font-extrabold mb-4 border-b border-slate-100 dark:border-slate-700 pb-2">Motocikli</h3>
+                        <ul class="space-y-2 text-slate-600 dark:text-slate-300 font-medium"><li>Yamaha MT07</li><li>Yamaha YBR 125</li></ul>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 text-center">
+                        <h3 class="text-2xl font-extrabold mb-4 border-b border-slate-100 dark:border-slate-700 pb-2">Automobili</h3>
+                        <ul class="space-y-2 text-slate-600 dark:text-slate-300 font-medium"><li>Hyundai i20</li><li>Škoda Karoq</li><li>Škoda Scala</li><li>Volkswagen Polo</li></ul>
+                    </div>
+                    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 text-center">
+                        <h3 class="text-2xl font-extrabold mb-4 border-b border-slate-100 dark:border-slate-700 pb-2">Kamioni i prikolice</h3>
+                        <ul class="space-y-2 text-slate-600 dark:text-slate-300 font-medium"><li>Iveco Eurocargo</li><li>Prikolica Humbaur</li><li>Prikolica Biberach</li><li>Prikolica Temsa</li></ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="simulator" class="py-24 bg-white dark:bg-slate-800/50 border-y border-slate-200 dark:border-slate-800 theme-transition">
+            <div class="max-w-[90rem] mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                <div class="order-2 lg:order-1 bg-slate-50 dark:bg-slate-900 p-2 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700">
+                    <div class="rounded-2xl overflow-hidden video-container bg-black">
+                        <iframe src="https://www.youtube.com/embed/zcrUeEqFPPA?start=125" title="Simulator Vožnje" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    </div>
+                </div>
+                <div class="order-1 lg:order-2">
+                    <div class="inline-block bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-bold px-3 py-1 rounded-full text-xs mb-4 uppercase tracking-wider">Novo!</div>
+                    <h2 class="text-3xl md:text-5xl font-extrabold mb-6">Besplatno na simulatoru</h2>
+                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                        Simulator je uređaj zahvaljujući kojem se kandidata stavlja u situaciju koja nalikuje stvarnoj vožnji. Kandidat rukuje istim uređajima kao na pravom automobilu.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section id="usluge" class="py-24">
+            <div class="max-w-[90rem] mx-auto px-6">
+                <h2 class="text-3xl md:text-5xl font-extrabold mb-16 text-center">Usluge i Aktivnosti</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <h3 class="text-xl font-bold mb-4">Online Upisi</h3>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">Upis možete obaviti online u nekoliko trenutaka.</p>
+                    </div>
+                    
+                    <button onclick="openServiceModal('hak')" class="text-left bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-hakBlue hover:-translate-y-1 transition duration-300">
+                        <h3 class="text-xl font-bold mb-4">Članstvo i pogodnosti</h3>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">Upoznajte HAK-ove modele članstva i ostvarite pogodnosti! <span class="text-hakBlue font-bold block mt-2">Saznaj više →</span></p>
+                    </button>
+                    
+                    <button onclick="openServiceModal('brodica')" class="text-left bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:border-hakBlue hover:-translate-y-1 transition duration-300">
+                        <h3 class="text-xl font-bold mb-4">Voditelj brodice</h3>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">Organiziramo tečajeve i pripremu za ispit za voditelja brodice. <span class="text-hakBlue font-bold block mt-2">Saznaj više →</span></p>
+                    </button>
+                    
+                    <div class="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                        <h3 class="text-xl font-bold mb-4">Ostale aktivnosti</h3>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">Sudjelujemo u preventivno-edukativnim akcijama.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="galerija" class="py-24 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-200 dark:border-slate-800 theme-transition">
+            <div class="max-w-[90rem] mx-auto px-6">
+                <h2 class="text-3xl md:text-5xl font-extrabold mb-12">Galerija</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <div class="aspect-square bg-slate-200 dark:bg-slate-700 rounded-2xl flex items-center justify-center font-bold text-slate-400">[ Slika: hak ]</div>
+                    <div class="aspect-square bg-slate-200 dark:bg-slate-700 rounded-2xl flex items-center justify-center font-bold text-slate-400">[ Slika: 19 ]</div>
+                    <div class="aspect-square bg-slate-200 dark:bg-slate-700 rounded-2xl flex items-center justify-center font-bold text-slate-400">[ Slika: profesor ]</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="kontakt" class="py-24">
+            <div class="max-w-[90rem] mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16">
+                <div>
+                    <h2 class="text-3xl md:text-5xl font-extrabold mb-8">Kontakt</h2>
+                    <div class="space-y-4 text-slate-700 dark:text-slate-300">
+                        <p><strong>Adresa:</strong> Slavka Kolara 48, 10410 Velika Gorica</p>
+                        <p><strong>Telefon:</strong> +385 1 62 21 271 / +385 95 9008 227</p>
+                        <p><strong>Email:</strong> ak-velika-gorica@zg.t-com.hr</p>
+                        <p><strong>Radno vrijeme:</strong> Pon - Pet: 09:00 – 17:00 h</p>
+                    </div>
+                    <div class="mt-8 p-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-slate-700 rounded-2xl">
+                        <h4 class="text-lg font-bold text-yellow-800 dark:text-yellow-500 mb-2">HAK - Važne informacije</h4>
+                        <ul class="text-sm space-y-1 text-slate-700 dark:text-slate-300">
+                            <li>Pomoć na cesti: <strong>1987</strong></li>
+                            <li>Iz inozemstva: <strong>+385 1 1987</strong></li>
+                            <li>Stanje na cestama: <strong>072 777 777</strong></li>
+                            <li>Info za članove: <strong>0800 9987</strong></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 theme-transition">
+                    <h3 class="text-2xl font-extrabold mb-6">Prijavi se online</h3>
+                    <form class="space-y-4">
+                        <input type="text" placeholder="Ime i prezime *" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-hakBlue text-slate-900 dark:text-white">
+                        <input type="email" placeholder="Email *" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-hakBlue text-slate-900 dark:text-white">
+                        <textarea rows="4" placeholder="Poruka..." class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-hakBlue text-slate-900 dark:text-white"></textarea>
+                        <button type="button" class="w-full bg-hakBlue hover:bg-blue-800 dark:bg-blue-600 text-white font-bold py-4 rounded-lg transition shadow-md">Pošalji prijavu</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-slate-950 py-8 text-center text-slate-500 text-sm border-t border-slate-800">
+        <p>Copyright © 2026 Autoklub Velika Gorica. Sva prava pridržana.</p>
+    </footer>
+
+    <div id="categoryModal" class="hidden-modal fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+        <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onclick="closeModal()"></div>
+        <div class="relative w-full max-w-6xl bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col lg:flex-row max-h-[90vh]">
+            <button onclick="closeModal()" class="absolute top-4 right-4 z-10 p-2 bg-slate-100 dark:bg-slate-800 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                <svg class="w-6 h-6 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+
+            <div class="w-full lg:w-1/2 h-[300px] lg:h-auto bg-slate-100 dark:bg-slate-800 relative flex flex-col">
+                <canvas id="modalCanvas" class="canvas-container absolute inset-0"></canvas>
+                <img id="modalMediaImage" src="" alt="Slika usluge" class="hidden absolute inset-0 w-full h-full object-cover">
+                
+                <div id="modalVehicleOverlay" class="absolute bottom-6 left-6 right-6 pointer-events-none">
+                    <div class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-4 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 pointer-events-auto">
+                        <p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Prikaz</p>
+                        <h4 id="modalVehicleName" class="text-xl font-extrabold mb-2">Učitavanje...</h4>
+                        
+                        <div id="modalModelSelector" class="flex gap-2 overflow-x-auto hide-scroll pb-1 hidden"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full lg:w-1/2 py-8 lg:py-12 pl-8 lg:pl-12 pr-2 lg:pr-4 flex flex-col h-auto max-h-full">
+                <div class="overflow-y-auto pr-6 lg:pr-8 custom-scrollbar h-full">
+                    
+                    <div class="inline-block bg-blue-100 dark:bg-blue-900/30 text-hakBlue dark:text-blue-400 font-bold px-3 py-1 rounded-full text-xs mb-4 uppercase tracking-wider" id="modalCategoryTag">Kat</div>
+                    <h2 id="modalTitle" class="text-3xl md:text-5xl font-extrabold mb-6">Naslov</h2>
+                    
+                    <div id="vehicleContentBlock">
+                        <ul id="modalInfoList" class="space-y-2 font-medium mb-8 text-slate-700 dark:text-slate-300"></ul>
+                        <h3 class="text-xl font-bold mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">Cjenik i uvjeti polaganja</h3>
+                        <div id="modalPricingContainer" class="space-y-4"></div>
+                    </div>
+
+                    <div id="serviceContentBlock" class="hidden text-slate-700 dark:text-slate-300 leading-relaxed space-y-4"></div>
+
+                    <div class="mt-8 pt-8 border-t border-slate-200 dark:border-slate-700">
+                        <p class="text-sm text-slate-500 mb-4" id="modalFooterText">Nudimo mogućnost plaćanja na rate karticama Zagrebačke i Privredne banke te Diners karticama.</p>
+                        <a href="#kontakt" onclick="closeModal()" class="block w-full bg-hakBlue hover:bg-blue-800 text-white text-center font-bold py-4 rounded-xl transition shadow-md" id="modalCtaBtn">Zatraži upis</a>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. DATA ---
+        const categoryData = {
+            'a1': { 
+                title: 'A1 Kategorija', tag: 'Motocikli', 
+                vehicles: [{ name: 'Yamaha YBR 125', file: 'car.glb' }], 
+                info: ['Motocikli do 125 cm3', 'Starosna dob: 16 godina', 'Obuka na Yamaha YBR 125'], 
+                pricing: [{ condition: 'Ne posjedujete vozačku', age: '15,5 god.', theory: '30 sati', driving: '20 sati', price: '1.076,00 EUR' }] 
+            },
+            'a2': { 
+                title: 'A2 Kategorija', tag: 'Motocikli', 
+                vehicles: [{ name: 'Yamaha MT07', file: 'car.glb' }], 
+                info: ['Motocikli do 35 Kw', 'Starosna dob: 18 godina', 'Obuka na Yamaha MT07'], 
+                pricing: [{ condition: 'Već posjedujete B', age: '18 god.', theory: '0 sati', driving: '15 sati', price: '658,50 EUR' }, { condition: 'Ne posjedujete vozačku', age: '17,5 god.', theory: '30 sati', driving: '20 sati', price: '1.076,00 EUR' }] 
+            },
+            'a': { 
+                title: 'A Kategorija', tag: 'Motocikli', 
+                vehicles: [{ name: 'Yamaha MT07', file: 'car.glb' }], 
+                info: ['Motocikli iznad 35 kW', 'Starosna dob: 24 godine', 'Obuka na Yamaha MT07'], 
+                pricing: [{ condition: 'Već posjedujete B', age: '23,5 god.', theory: '0 sati', driving: '15 sati', price: '658,50 EUR' }, { condition: 'Ne posjedujete vozačku', age: '23,5 god.', theory: '30 sati', driving: '25 sati', price: '1.295,50 EUR' }] 
+            },
+            'b': { 
+                title: 'B Kategorija', tag: 'Osobni automobili', 
+                vehicles: [
+                    { name: 'Hyundai i20', file: 'car.glb' },
+                    { name: 'Škoda Karoq', file: 'car.glb' },
+                    { name: 'VW Polo', file: 'car.glb' }
+                ], 
+                info: ['Osobna vozila do 3500 kg', 'Starosna dob: 18 godina', 'Obuka na novim vozilima'], 
+                pricing: [{ condition: 'Posjedujete A, A1, A2', age: '17,5 god.', theory: '4 sata', driving: '30 sati', price: '1.013,40 EUR' }, { condition: 'Ne posjedujete vozačku', age: '17,5 god.', theory: '30 sati', driving: '35 sati', price: '1.349,50 EUR' }] 
+            },
+            'be': { 
+                title: 'B+E Kategorija', tag: 'Osobno + Prikolica', 
+                vehicles: [{ name: 'Škoda Karoq + Prikolica', file: 'car.glb' }], 
+                info: ['B kategorija s prikolicom', 'Starosna dob: 18 godina'], 
+                pricing: [{ condition: 'Posjedujete B kategoriju', age: '18 god.', theory: '5 sati', driving: '10 sati', price: '540,00 EUR' }] 
+            },
+            'c': { 
+                title: 'C Kategorija', tag: 'Teretna vozila', 
+                vehicles: [{ name: 'Iveco Eurocargo', file: 'car.glb' }], 
+                info: ['Teretna vozila preko 7500 kg', 'Starosna dob: 21 godina'], 
+                pricing: [{ condition: 'Posjedujete C1', age: '21 god.', theory: '5 sati', driving: '10 sati', price: '640,00 EUR' }, { condition: 'Posjedujete B', age: '21 god.', theory: '15 sati', driving: '15 sati', price: '1.020,00 EUR' }] 
+            },
+            'ce': { 
+                title: 'C+E Kategorija', tag: 'Teretno + Prikolica', 
+                vehicles: [{ name: 'Iveco + Prikolica', file: 'car.glb' }], 
+                info: ['Teretna vozila s prikolicom', 'Starosna dob: 21 godina'], 
+                pricing: [{ condition: 'Posjedujete C', age: '21 god.', theory: '5 sati', driving: '10 sati', price: '790,00 EUR' }] 
+            },
+            'kod96': { 
+                title: 'Kod 96', tag: 'Automobili', 
+                vehicles: [{ name: 'Škoda + Prikolica', file: 'car.glb' }], 
+                info: ['Osobno vozilo s prikolicom', 'Polaganje ispita vožnje bez teorije'], 
+                pricing: [{ condition: 'Posjedujete B', age: '18 god.', theory: '0 sati', driving: '1 sat', price: '210,00 EUR' }] 
+            }
+        };
+
+        const serviceData = {
+            'hak': {
+                title: 'Članstvo i pogodnosti', tag: 'HAK', image: 'https://via.placeholder.com/800x600/004b87/ffffff?text=HAK+Pogodnosti', buttonText: 'Postani član',
+                content: `
+                    <p class="font-bold text-lg mb-4 text-hakBlue dark:text-blue-400">Upoznajte HAK-ove modele članstva i ostvarite brojne pogodnosti i uštede!</p>
+                    <p class="mb-4">HAK nudi članske modele <strong>“START”</strong>, <strong>“OPTIMUM”</strong>, i <strong>“EUROPA”</strong> prilagođene različitim potrebama vozača. Vaša članska iskaznica HAK-a donosi Vam brojne popuste i uštede na prodajnim mjestima HAK-ovih partnera u Hrvatskoj i inozemstvu.</p>
+                    
+                    <div class="bg-blue-50 dark:bg-slate-800/80 p-5 rounded-2xl border border-blue-100 dark:border-slate-700 mb-6">
+                        <h4 class="font-extrabold text-hakBlue dark:text-blue-400 mb-2">Jednokratna novčana pomoć:</h4>
+                        <p class="text-sm mb-3">u slučaju smrti u iznosu od 1.327,23 € (10.000,00 kn) ili u slučaju trajnog tjelesnog oštećenja do maksimalnog iznosa od 2.654,46 € (20.000,00 kn), proporcionalno stupnju tjelesnog oštećenja, a kao posljedica prometne nesreće.</p>
+                        <div class="text-xs text-slate-500 font-semibold bg-white dark:bg-slate-900 inline-block p-2 rounded-lg">
+                            Konverzija:<br>
+                            * 53,09 € = 400,00 kn<br>
+                            ** 66,36 € = 500,00 kn
+                        </div>
+                    </div>
+
+                    <h4 class="font-extrabold text-xl mb-3">Obiteljsko članstvo Hrvatskog autokluba</h4>
+                    <p class="mb-4 text-sm">Obiteljsko članstvo Hrvatskog autokluba podrazumijeva obitelj kao zajednicu bračnih ili izvanbračnih drugova i njihove djece do 25. godine života, uključujući i djecu koja ne žive u obitelji – ako nisu zasnovala vlastitu obitelj. Obuhvaća i obitelji koje čine jedan roditelj i dijete ili djeca, kao i bračni ili izvanbračni drugovi bez djece. Najmanji mogući broj članova u Obiteljskom članstvu su dvije osobe, a najveći broj članova u Obiteljskom članstvu ovisi o broju djece do 25. godine života.</p>
+                    
+                    <p class="mb-6 text-sm">U Obiteljskom članstvu sudjeluju najmanje dvije osobe: nositelj članstva i ostali članovi obitelji, odnosno roditelji, partneri te njihova djeca do 25. godine života koji zajednički koriste ovdje navedene pogodnosti. Članske pogodnosti vezane uz vozilo dostupne su članovima obitelji starijima od 18 godina, a maloljetnici imaju pravo na ostale pogodnosti.</p>
+                `
+            },
+            'brodica': {
+                title: 'Tečaj za voditelja brodice', tag: 'Edukacija', image: 'brodica3.jpg', buttonText: 'Prijavi se za tečaj',
+                content: `
+                    <p class="mb-4 font-semibold text-lg text-hakBlue dark:text-blue-400">U Autoklubu Velika Gorica organiziramo tečajeve za voditelja brodice:</p>
+                    <ul class="space-y-2 mb-6 ml-2 border-l-2 border-hakYellow pl-4">
+                        <li><strong class="text-slate-900 dark:text-white">» A kategorija</strong></li>
+                        <li><strong class="text-slate-900 dark:text-white">» B kategorija</strong></li>
+                        <li><strong>» dopunski ispit za B kategoriju:</strong> Pomorska radiotelefonska služba</li>
+                    </ul>
+
+                    <div class="bg-slate-50 dark:bg-slate-800 p-5 rounded-2xl mb-6 border border-slate-200 dark:border-slate-700">
+                        <h4 class="font-extrabold mb-2 text-slate-900 dark:text-white">UVJETI za pristup tečaju su godine starosti i to:</h4>
+                        <ul class="list-disc pl-5 text-sm space-y-1">
+                            <li>15 godina za A kategoriju</li>
+                            <li>16 godina za B kategoriju</li>
+                        </ul>
+                    </div>
+
+                    <h4 class="font-extrabold mb-3 text-slate-900 dark:text-white">Program predavanja sastoji se od:</h4>
+                    <ol class="list-decimal pl-5 mb-6 space-y-2 text-sm bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-inner">
+                        <li class="pl-2">pomorska plovidba (navigacija)</li>
+                        <li class="pl-2">pomorstvo, propisi i meteorologija</li>
+                        <li class="pl-2">motoristika i zaštitne mjere</li>
+                        <li class="pl-2">manevriranje brodicom, sigurnost plovidbe i pružanje prve pomoći</li>
+                        <li class="pl-2">pomorska radiotelefonska služba</li>
+                    </ol>
+                    
+                    <p class="mb-6 text-sm italic text-slate-500">Dugogodišnje iskustvo predavača, kako teoretsko tako i praktično, pomoći će vam da u potpunosti savladate potrebna znanja.</p>
+                    
+                    <div class="bg-hakBlue text-white p-5 rounded-2xl shadow-md">
+                        <h4 class="font-extrabold mb-2 text-hakYellow">INFO I PREDBILJEŽBE:</h4>
+                        <p class="flex items-center gap-2 mb-1"><span class="opacity-70">Tel:</span> <a href="tel:+38516221271" class="font-bold hover:underline">+385 1 62 21 271</a></p>
+                        <p class="flex items-center gap-2"><span class="opacity-70">Mob:</span> <a href="tel:+385959008227" class="font-bold hover:underline">+385 95 9008 227</a></p>
+                    </div>
+                `
+            }
+        };
+
+        // --- 2. THEME ---
+        const htmlElement = document.documentElement;
+        const themeToggleBtn = document.getElementById('themeToggle');
+        if (localStorage.theme === 'dark') { htmlElement.classList.add('dark'); } 
+        else { htmlElement.classList.remove('dark'); localStorage.theme = 'light'; }
+        let isDarkMode = htmlElement.classList.contains('dark');
+
+        function getClearColor(isDark) { return isDark ? new BABYLON.Color4(0.12, 0.16, 0.22, 1) : new BABYLON.Color4(0.94, 0.96, 0.98, 1); }
+
+        themeToggleBtn.addEventListener('click', () => {
+            htmlElement.classList.toggle('dark');
+            isDarkMode = htmlElement.classList.contains('dark');
+            localStorage.theme = isDarkMode ? 'dark' : 'light';
+            if (heroScene) heroScene.clearColor = getClearColor(isDarkMode);
+            if (modalScene) modalScene.clearColor = getClearColor(isDarkMode);
+        });
+
+        // --- 3. BABYLON.JS - HERO GAME ENGINE ---
+        let heroScene = null;
+        let carHitbox = null; 
+        let carMesh = null; 
+        let chaseCamera = null;
+        let showroomCamera = null;
+        let boxes = [];
+        let gameScore = 0;
+        let isGameActive = false;
+        let hasIntroFinished = false;
+
+        const inputMap = { w: false, a: false, s: false, d: false };
+        let speed = 0;
+        const maxSpeed = 0.5;
+        const acceleration = 0.02;
+        const friction = 0.94; 
+
+        const carScale = 1.5; 
+
+        const heroCanvas = document.getElementById("heroCanvas");
+        const heroEngine = new BABYLON.Engine(heroCanvas, true, { preserveDrawingBuffer: true, stencil: true });
+        
+        const createHeroScene = async () => {
+            const scene = new BABYLON.Scene(heroEngine);
+            heroScene = scene;
+            scene.clearColor = getClearColor(isDarkMode);
+
+            showroomCamera = new BABYLON.ArcRotateCamera("showCam", -Math.PI / 2, Math.PI / 2.3, 16, BABYLON.Vector3.Zero(), scene);
+            showroomCamera.attachControl(heroCanvas, true);
+
+            chaseCamera = new BABYLON.FollowCamera("chaseCam", new BABYLON.Vector3(0, 5, -10), scene);
+            chaseCamera.radius = 18;
+            chaseCamera.heightOffset = 6;
+            chaseCamera.rotationOffset = 180;
+            chaseCamera.cameraAcceleration = 0.05;
+
+            const hemiLight = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 1, 0), scene);
+            hemiLight.intensity = 0.9;
+
+            const ground = BABYLON.MeshBuilder.CreateGround("ground", {width: 150, height: 150}, scene);
+            ground.position.y = 0; 
+            const gridMat = new BABYLON.StandardMaterial("grid", scene);
+            gridMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+            gridMat.alpha = 0; 
+            ground.material = gridMat;
+
+            // HITBOX SETUP
+            carHitbox = BABYLON.MeshBuilder.CreateBox("carHitbox", {width: 1.5, height: 1, depth: 3.2}, scene);
+            carHitbox.isVisible = false; 
+            carHitbox.position = new BABYLON.Vector3(0, -8, -12); 
+            
+            chaseCamera.lockedTarget = carHitbox; 
+
+         try {
+                const result = await BABYLON.SceneLoader.ImportMeshAsync("", "./", "car.glb", scene);
+                carMesh = result.meshes[0];
+                
+                carMesh.setParent(carHitbox); 
+                
+                // I REMOVED the addRotation line here! This flips it 180 degrees.
+                
+                carMesh.scaling.scaleInPlace(carScale);
+                carMesh.position = new BABYLON.Vector3(0, -0.5, 0); 
+
+            } catch (e) {
+                console.warn("Fallback cube used.");
+                carMesh = BABYLON.MeshBuilder.CreateBox("fallbackCar", {width: 1.5, height: 1, depth: 3}, scene);
+                let mat = new BABYLON.StandardMaterial("m", scene);
+                mat.diffuseColor = new BABYLON.Color3(0.2, 0.5, 0.8);
+                carMesh.material = mat;
+                carMesh.setParent(carHitbox);
+                carMesh.position = new BABYLON.Vector3(0, 0, 0);
+            }
+
+            const boxMat = new BABYLON.StandardMaterial("boxMat", scene);
+            boxMat.diffuseColor = new BABYLON.Color3(0.2, 0.8, 0.2); 
+
+            for(let i=0; i<20; i++) {
+                let box = BABYLON.MeshBuilder.CreateBox("box" + i, {size: 1.5}, scene);
+                box.position = new BABYLON.Vector3((Math.random() - 0.5) * 60, 0.75, (Math.random() - 0.5) * 60);
+                if(box.position.length() < 10) box.position.x += 15; 
+                box.material = boxMat;
+                box.isVisible = false;
+                boxes.push(box);
+            }
+            
+            // SLIDE IN ANIMATION (1.5 seconds)
+            const frameRate = 60;
+            const endFrame = 90; 
+
+            const yAnim = new BABYLON.Animation("slideUp", "position.y", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+            yAnim.setKeys([{ frame: 0, value: -8 }, { frame: endFrame, value: 0.5 }]); 
+
+            const zAnim = new BABYLON.Animation("slideForward", "position.z", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+            zAnim.setKeys([{ frame: 0, value: -12 }, { frame: endFrame, value: 0 }]); 
+
+            const easingFunc = new BABYLON.QuarticEase();
+            easingFunc.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEOUT); 
+            yAnim.setEasingFunction(easingFunc);
+            zAnim.setEasingFunction(easingFunc);
+
+            scene.beginDirectAnimation(carHitbox, [yAnim, zAnim], 0, endFrame, false, 1, () => {
+                hasIntroFinished = true;
+                document.getElementById('introOverlay').classList.remove('opacity-0', 'pointer-events-none');
+            });
+            
+            // PHYSICS LOOP
+            scene.onBeforeRenderObservable.add(() => {
+                if (!isGameActive) {
+                    if(hasIntroFinished) carHitbox.rotation.y += 0.002; 
+                    return;
+                }
+
+                if (inputMap.w) speed += acceleration;
+                if (inputMap.s) speed -= acceleration;
+                speed *= friction; 
+                speed = Math.max(Math.min(speed, maxSpeed), -maxSpeed);
+
+                if (Math.abs(speed) > 0.01) {
+                    let turn = 0.04 * (speed / maxSpeed);
+                    if (inputMap.a) carHitbox.rotation.y -= turn;
+                    if (inputMap.d) carHitbox.rotation.y += turn;
+                }
+
+                let forward = new BABYLON.Vector3(Math.sin(carHitbox.rotation.y), 0, Math.cos(carHitbox.rotation.y));
+                carHitbox.position.x += forward.x * speed;
+                carHitbox.position.z += forward.z * speed;
+                
+                carHitbox.position.x = Math.max(Math.min(carHitbox.position.x, 70), -70);
+                carHitbox.position.z = Math.max(Math.min(carHitbox.position.z, 70), -70);
+                carHitbox.position.y = 0.5; 
+
+                for(let i=boxes.length-1; i>=0; i--) {
+                    let box = boxes[i];
+                    if(carHitbox.intersectsMesh(box, false)) { 
+                        gameScore += 10;
+                        document.getElementById('scoreDisplay').innerText = gameScore;
+                        
+                        let flyAnim = new BABYLON.Animation("fly", "position.y", 30, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+                        flyAnim.setKeys([{frame:0, value:0.75}, {frame:30, value:15}]);
+                        box.animations.push(flyAnim);
+                        scene.beginDirectAnimation(box, [flyAnim], 0, 30, false, 1, () => box.dispose());
+                        
+                        boxes.splice(i, 1);
+                    }
+                }
+            });
+
+            return scene;
+        };
+
+        createHeroScene().then(() => heroEngine.runRenderLoop(() => heroScene.render()));
+
+        // --- 4. GAME CONTROLS ---
+        const btnStart = document.getElementById('btnStartGame');
+        const btnExit = document.getElementById('btnExitGame');
+        const introOverlay = document.getElementById('introOverlay');
+        const gameOverlay = document.getElementById('gameOverlay');
+
+        window.addEventListener("keydown", (e) => {
+            if(e.key === "w" || e.key === "ArrowUp") inputMap.w = true;
+            if(e.key === "a" || e.key === "ArrowLeft") inputMap.a = true;
+            if(e.key === "s" || e.key === "ArrowDown") inputMap.s = true;
+            if(e.key === "d" || e.key === "ArrowRight") inputMap.d = true;
+        });
+        window.addEventListener("keyup", (e) => {
+            if(e.key === "w" || e.key === "ArrowUp") inputMap.w = false;
+            if(e.key === "a" || e.key === "ArrowLeft") inputMap.a = false;
+            if(e.key === "s" || e.key === "ArrowDown") inputMap.s = false;
+            if(e.key === "d" || e.key === "ArrowRight") inputMap.d = false;
+        });
+
+        const bindBtn = (id, key) => {
+            const el = document.getElementById(id);
+            el.addEventListener('pointerdown', (e) => { e.preventDefault(); inputMap[key] = true; });
+            el.addEventListener('pointerup', (e) => { e.preventDefault(); inputMap[key] = false; });
+            el.addEventListener('pointerleave', (e) => { e.preventDefault(); inputMap[key] = false; });
+        };
+        bindBtn('btnGas', 'w'); bindBtn('btnBrake', 's'); bindBtn('btnLeft', 'a'); bindBtn('btnRight', 'd');
+
+        btnStart.addEventListener('click', () => {
+            isGameActive = true;
+            introOverlay.classList.add('opacity-0', 'pointer-events-none');
+            gameOverlay.classList.remove('opacity-0', 'pointer-events-none');
+            
+            heroScene.activeCamera = chaseCamera;
+            heroScene.getMeshByName("ground").material.alpha = 1; 
+            boxes.forEach(b => b.isVisible = true);
+            
+            carHitbox.rotation.y = 0; 
+            speed = 0;
+            gameScore = 0;
+            document.getElementById('scoreDisplay').innerText = gameScore;
+        });
+
+        btnExit.addEventListener('click', () => {
+            isGameActive = false;
+            introOverlay.classList.remove('opacity-0', 'pointer-events-none');
+            gameOverlay.classList.add('opacity-0', 'pointer-events-none');
+            
+            heroScene.activeCamera = showroomCamera;
+            heroScene.getMeshByName("ground").material.alpha = 0; 
+            boxes.forEach(b => b.isVisible = false);
+            
+            speed = 0;
+            inputMap.w = inputMap.a = inputMap.s = inputMap.d = false;
+            carHitbox.position = new BABYLON.Vector3(0, 0.5, 0); 
+        });
+
+        // --- 5. MODAL ENGINE ---
+        let modalScene = null;
+        let modalMesh = null;
+        const modalCanvas = document.getElementById("modalCanvas");
+        const modalEngine = new BABYLON.Engine(modalCanvas, true, { preserveDrawingBuffer: true, stencil: true });
+
+        const createModalScene = () => {
+            const scene = new BABYLON.Scene(modalEngine);
+            modalScene = scene;
+            scene.clearColor = getClearColor(isDarkMode);
+            
+            const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 3, Math.PI / 2.3, 4, BABYLON.Vector3.Zero(), scene);
+            camera.attachControl(modalCanvas, true);
+            camera.lowerRadiusLimit = 2.5; 
+            camera.upperRadiusLimit = 8;   
+            
+            const hemiLight = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 1, 0), scene);
+            hemiLight.intensity = 0.9;
+            scene.onBeforeRenderObservable.add(() => { if (modalMesh) modalMesh.rotation.y += 0.005; });
+            return scene;
+        };
+
+        createModalScene();
+        modalEngine.runRenderLoop(() => modalScene.render());
+
+        window.addEventListener("resize", () => {
+            heroEngine.resize();
+            modalEngine.resize();
+        });
+
+        const loadModalModel = async (fileName, displayName) => {
+            if (modalMesh) modalMesh.dispose();
+            document.getElementById('modalVehicleName').innerText = "Učitavanje...";
+            try {
+                const result = await BABYLON.SceneLoader.ImportMeshAsync("", "./", fileName, modalScene);
+                modalMesh = result.meshes[0];
+                modalMesh.normalizeToUnitCube(); 
+                modalMesh.position.y = -0.3;
+                document.getElementById('modalVehicleName').innerText = displayName;
+            } catch (e) { 
+                console.error("Modal error", e); 
+                document.getElementById('modalVehicleName').innerText = "Greška";
+            }
+        };
+
+        // --- 6. SHARED MODAL UI LOGIC ---
+        const modal = document.getElementById('categoryModal');
+        const canvasContainer = document.getElementById('modalCanvas');
+        const mediaImage = document.getElementById('modalMediaImage');
+        const vehicleOverlay = document.getElementById('modalVehicleOverlay');
+        const modelSelector = document.getElementById('modalModelSelector');
+        const vehicleContentBlock = document.getElementById('vehicleContentBlock');
+        const serviceContentBlock = document.getElementById('serviceContentBlock');
+        const modalFooterText = document.getElementById('modalFooterText');
+        const modalCtaBtn = document.getElementById('modalCtaBtn');
+
+        function openModal(categoryId) {
+            const data = categoryData[categoryId];
+            if (!data) return;
+
+            document.body.style.overflow = 'hidden'; 
+
+            canvasContainer.classList.remove('hidden');
+            mediaImage.classList.add('hidden');
+            vehicleOverlay.classList.remove('hidden');
+            vehicleContentBlock.classList.remove('hidden');
+            serviceContentBlock.classList.add('hidden');
+            modalFooterText.classList.remove('hidden');
+            modalCtaBtn.innerText = "Zatraži upis";
+
+            document.getElementById('modalTitle').innerText = data.title;
+            document.getElementById('modalCategoryTag').innerText = data.tag;
+            
+            if(data.vehicles && data.vehicles.length > 1) {
+                modelSelector.classList.remove('hidden');
+                modelSelector.innerHTML = data.vehicles.map((v) => `
+                    <button onclick="loadModalModel('${v.file}', '${v.name}')" class="whitespace-nowrap bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 px-3 py-1 rounded-full text-xs font-bold hover:bg-hakBlue hover:text-white transition">
+                        ${v.name}
+                    </button>
+                `).join('');
+            } else {
+                modelSelector.classList.add('hidden');
+            }
+
+            document.getElementById('modalInfoList').innerHTML = data.info.map(item => `<li class="flex items-start"><span class="text-hakBlue font-bold mr-2">✓</span> ${item}</li>`).join('');
+
+            document.getElementById('modalPricingContainer').innerHTML = data.pricing.map(pb => `
+                <div class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 rounded-2xl">
+                    <div class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">Uvjet:</div>
+                    <div class="font-extrabold text-slate-900 dark:text-white mb-4">${pb.condition}</div>
+                    <div class="grid grid-cols-3 gap-2 mb-4 text-sm">
+                        <div><span class="text-slate-500">Min. dob:</span><br><span class="font-bold text-slate-900 dark:text-white">${pb.age}</span></div>
+                        <div><span class="text-slate-500">Predavanja:</span><br><span class="font-bold text-slate-900 dark:text-white">${pb.theory}</span></div>
+                        <div><span class="text-slate-500">Vožnja:</span><br><span class="font-bold text-slate-900 dark:text-white">${pb.driving}</span></div>
+                    </div>
+                    <div class="flex justify-between items-end border-t border-slate-200 dark:border-slate-700 pt-4 mt-2">
+                        <span class="text-sm font-semibold text-slate-500">Cijena (s PDV)</span>
+                        <span class="text-2xl font-extrabold text-hakBlue dark:text-blue-400">${pb.price}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            modal.classList.remove('hidden-modal');
+            modal.classList.add('active-modal');
+            modalEngine.resize(); 
+            
+            if(data.vehicles && data.vehicles.length > 0) {
+                loadModalModel(data.vehicles[0].file, data.vehicles[0].name);
+            }
+        }
+
+        function openServiceModal(serviceId) {
+            const data = serviceData[serviceId];
+            if (!data) return;
+
+            document.body.style.overflow = 'hidden'; 
+
+            canvasContainer.classList.add('hidden');
+            mediaImage.classList.remove('hidden');
+            vehicleOverlay.classList.add('hidden');
+            vehicleContentBlock.classList.add('hidden');
+            serviceContentBlock.classList.remove('hidden');
+            modalFooterText.classList.add('hidden'); 
+            modalCtaBtn.innerText = data.buttonText || "Saznaj više";
+
+            document.getElementById('modalTitle').innerText = data.title;
+            document.getElementById('modalCategoryTag').innerText = data.tag;
+            mediaImage.src = data.image; 
+            serviceContentBlock.innerHTML = data.content;
+
+            modal.classList.remove('hidden-modal');
+            modal.classList.add('active-modal');
+        }
+
+        function closeModal() {
+            document.body.style.overflow = ''; 
+            modal.classList.remove('active-modal');
+            modal.classList.add('hidden-modal');
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !modal.classList.contains('hidden-modal')) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
