@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <script src="https://cdn.babylonjs.com/havok/HavokPhysics_umd.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <script>
@@ -158,22 +159,39 @@
             scrollbar-color: #334155 transparent;
         }
 
-        /* Small, Repeating Diagonal Logo Pattern */
+        /* ROW 1, 3, 5 (The Base Layer) */
         .card-ribbon-bg {
             position: absolute;
             top: -50%;
             left: -50%;
             width: 200%;
             height: 200%;
-            background-image: url('hak-logo.png');
-            background-repeat: repeat;
-            background-size: 80px; /* Makes the logos much smaller. Change this number to adjust size! */
-            transform: rotate(-30deg); /* Angles the pattern */
-            opacity: 0.15; /* Keeps it subtle so the text is readable */
+            transform: rotate(-30deg);
+            opacity: 0.15;
             pointer-events: none;
             z-index: 0;
+            background-image: url('hak-logo.png');
+            background-size: 120px;
+            background-repeat: repeat;
+            /* Starts exactly at the top left corner */
+            background-position: 0px 0px;
         }
-        
+
+        /* ROW 2, 4, 6 (The Offset Layer) */
+        .card-ribbon-bg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: url('hak-logo.png');
+            background-size: 120px;
+            background-repeat: repeat;
+
+            /* THIS IS YOUR MANUAL OFFSET! */
+            /* 40px pushes it exactly halfway to the right. */
+            /* 30px pushes it down. */
+            background-position: 40px 30px;
+        }
+
         /* Dark Mode Support */
         .dark .card-ribbon-bg {
             opacity: 0.25;
@@ -224,6 +242,7 @@
     <main>
         <section id="pocetna"
             class="relative pt-32 pb-20 lg:pt-40 lg:pb-32 max-w-[90rem] mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center min-h-[90vh]">
+
             <div class="z-10">
                 <div
                     class="inline-block bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 font-bold px-4 py-1.5 rounded-full text-sm mb-6 uppercase tracking-wide border border-yellow-200 dark:border-yellow-700/50">
@@ -256,7 +275,6 @@
 
                 <div id="introOverlay"
                     class="absolute inset-0 flex flex-col items-center justify-end pb-12 bg-gradient-to-t from-slate-900/80 to-transparent z-20 transition-opacity duration-500 opacity-0 pointer-events-none">
-                    <p class="text-white font-bold mb-4 drop-shadow-md text-lg">Zanima te kako je to voziti?</p>
                     <button id="btnStartGame"
                         class="bg-hakYellow text-slate-900 px-8 py-4 rounded-full font-extrabold text-xl transition shadow-2xl flex items-center gap-3 hover:scale-105 btn-pulse pointer-events-auto">
                         <span class="text-2xl">🎮</span> Probna vožnja
@@ -265,26 +283,66 @@
 
                 <div id="gameOverlay"
                     class="absolute inset-0 z-20 opacity-0 pointer-events-none flex flex-col justify-between p-4">
-                    <div class="flex justify-between items-start">
-                        <div
-                            class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-6 py-2 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700">
-                            <span class="text-slate-500 text-xs font-bold uppercase block">Zeleni bodovi</span>
-                            <span id="scoreDisplay" class="text-3xl font-extrabold text-green-500">0</span>
+
+                    <div class="flex justify-between items-start pointer-events-auto w-full">
+
+                        <div class="flex flex-col gap-3">
+                            <div id="scoreContainer"
+                                class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-6 py-2 rounded-2xl shadow-lg border border-red-200 dark:border-red-900/50 transition-colors duration-300">
+                                <span class="text-slate-500 text-xs font-bold uppercase block">Kazneni bodovi</span>
+                                <span id="scoreDisplay" class="text-3xl font-extrabold text-red-500">0</span>
+                            </div>
+
+                            <div class="flex gap-2">
+                                <button id="btn-cam-chase"
+                                    class="bg-blue-600 text-white w-11 h-11 rounded-full shadow-lg flex items-center justify-center transition hover:bg-blue-500"
+                                    title="Normal View">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z">
+                                        </path>
+                                    </svg>
+                                </button>
+
+                                <button id="btn-cam-top"
+                                    class="bg-slate-800/90 backdrop-blur-md text-white w-11 h-11 rounded-full shadow-lg flex items-center justify-center hover:bg-slate-700 transition"
+                                    title="Top-Down View">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                                        </path>
+                                    </svg>
+                                </button>
+
+                                <button id="btn-cam-rev"
+                                    class="bg-slate-800/90 backdrop-blur-md text-white w-11 h-11 rounded-full shadow-lg flex items-center justify-center hover:bg-slate-700 transition"
+                                    title="Reverse View">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
+
                         <button id="btnExitGame"
-                            class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-3 rounded-full shadow-lg text-slate-500 hover:text-red-500 hover:bg-slate-100 pointer-events-auto transition">
+                            class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-3 rounded-full shadow-lg text-slate-500 hover:text-red-500 hover:bg-slate-100 transition">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
                         </button>
                     </div>
+
                     <div class="hidden md:block text-center mt-auto mb-6">
                         <span
                             class="bg-slate-900/80 text-white px-5 py-3 rounded-full text-sm font-semibold backdrop-blur-md shadow-lg border border-slate-700/50">
-                            Koristi strelice ili W A S D za vožnju • Pokupi zelene kocke!
+                            Koristi strelice ili W A S D za vožnju • Pazi na čunjeve i parkirana vozila!
                         </span>
                     </div>
+
                     <div class="md:hidden flex justify-between items-end w-full px-2 pb-2 mt-auto">
                         <div class="flex gap-2">
                             <button id="btnLeft"
@@ -294,9 +352,9 @@
                         </div>
                         <div class="flex flex-col gap-2">
                             <button id="btnGas"
-                                class="game-btn bg-hakBlue text-white backdrop-blur-md w-16 h-16 rounded-full shadow-lg active:bg-blue-600 pointer-events-auto font-bold text-sm">GAS</button>
+                                class="game-btn bg-hakBlue text-white backdrop-blur-md w-16 h-16 rounded-full shadow-lg active:bg-blue-600 pointer-events-auto text-2xl font-bold">↑</button>
                             <button id="btnBrake"
-                                class="game-btn bg-red-500/90 text-white backdrop-blur-md w-16 h-16 rounded-full shadow-lg active:bg-red-600 pointer-events-auto font-bold text-xs">KOČNICA</button>
+                                class="game-btn bg-red-500/90 text-white backdrop-blur-md w-16 h-16 rounded-full shadow-lg active:bg-red-600 pointer-events-auto text-2xl font-bold">↓</button>
                         </div>
                     </div>
                 </div>
@@ -398,110 +456,125 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-24">
 
-                   <div class="relative overflow-hidden bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-lg hover:-translate-y-1 transition duration-300">
-                        
+                    <div
+                        class="relative overflow-hidden bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-lg hover:-translate-y-1 transition duration-300">
                         <div class="card-ribbon-bg"></div>
-
                         <div class="relative z-10 flex flex-col items-center w-full">
-                            
-                            <div class="w-28 h-28 shrink-0 rounded-full mb-5 overflow-hidden shadow-md border-4 border-slate-50 dark:border-slate-700 bg-slate-200 dark:bg-slate-700">
+                            <div
+                                class="w-28 h-28 shrink-0 rounded-full mb-5 overflow-hidden shadow-md border-4 border-slate-50 dark:border-slate-700 bg-slate-200 dark:bg-slate-700">
                                 <img src="djelatnik.jpg" alt="Toni Lukačević" class="w-full h-full object-cover">
                             </div>
-                            
                             <h3 class="text-2xl font-extrabold mb-1">Toni Lukačević</h3>
                             <p class="text-hakBlue dark:text-blue-400 font-semibold mb-6">Voditelj / Predavač</p>
-                            
-                            <div class="w-full space-y-3 text-sm bg-slate-50/90 dark:bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
-                                <div class="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2"><span>Kategorije:</span> <span class="font-bold">A, B, C, CE</span></div>
-                                <div class="flex justify-between pt-1"><span>Kontakt:</span> <a href="tel:0959008227" class="font-bold hover:text-hakBlue">095/ 9008 227</a></div>
+                            <div
+                                class="w-full space-y-3 text-sm bg-slate-50/90 dark:bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+                                <div class="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
+                                    <span>Kategorije:</span> <span class="font-bold">A, B, C, CE</span>
+                                </div>
+                                <div class="flex justify-between pt-1"><span>Kontakt:</span> <a href="tel:0959008227"
+                                        class="font-bold hover:text-hakBlue">095/ 9008 227</a></div>
                             </div>
-
-                        </div>
-                    </div> 
-
-                    <div
-                        class="bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-lg hover:-translate-y-1 transition duration-300">
-                        <div
-                            class="w-28 h-28 shrink-0 rounded-full mb-5 overflow-hidden shadow-md border-4 border-slate-50 dark:border-slate-700 bg-slate-200 dark:bg-slate-700">
-                            <img src="djelatnik.jpg" alt="Srđan Borić" class="w-full h-full object-cover">
-                        </div>
-                        <h3 class="text-2xl font-extrabold mb-1">Srđan Borić</h3>
-                        <p class="text-hakBlue dark:text-blue-400 font-semibold mb-6">Instruktor vožnje</p>
-                        <div
-                            class="w-full space-y-3 text-sm bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl text-slate-700 dark:text-slate-300">
-                            <div class="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
-                                <span>Kategorije:</span> <span class="font-bold">A, B, C, CE</span>
-                            </div>
-                            <div class="flex justify-between pt-1"><span>Kontakt:</span> <a href="tel:098867342"
-                                    class="font-bold hover:text-hakBlue">098/ 8673 42</a></div>
                         </div>
                     </div>
 
                     <div
-                        class="bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-lg hover:-translate-y-1 transition duration-300">
-                        <div
-                            class="w-28 h-28 shrink-0 rounded-full mb-5 overflow-hidden shadow-md border-4 border-slate-50 dark:border-slate-700 bg-slate-200 dark:bg-slate-700">
-                            <img src="djelatnik.jpg" alt="Elvis Hadžić" class="w-full h-full object-cover">
-                        </div>
-                        <h3 class="text-2xl font-extrabold mb-1">Elvis Hadžić</h3>
-                        <p class="text-hakBlue dark:text-blue-400 font-semibold mb-6">Instruktor vožnje</p>
-                        <div
-                            class="w-full space-y-3 text-sm bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl text-slate-700 dark:text-slate-300">
-                            <div class="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
-                                <span>Kategorije:</span> <span class="font-bold">B, C, CE</span>
+                        class="relative overflow-hidden bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-lg hover:-translate-y-1 transition duration-300">
+                        <div class="card-ribbon-bg"></div>
+                        <div class="relative z-10 flex flex-col items-center w-full">
+                            <div
+                                class="w-28 h-28 shrink-0 rounded-full mb-5 overflow-hidden shadow-md border-4 border-slate-50 dark:border-slate-700 bg-slate-200 dark:bg-slate-700">
+                                <img src="djelatnik.jpg" alt="Srđan Borić" class="w-full h-full object-cover">
                             </div>
-                            <div class="flex justify-between pt-1"><span>Kontakt:</span> <a href="tel:0976441275"
-                                    class="font-bold hover:text-hakBlue">097/ 644 1275</a></div>
+                            <h3 class="text-2xl font-extrabold mb-1">Srđan Borić</h3>
+                            <p class="text-hakBlue dark:text-blue-400 font-semibold mb-6">Instruktor vožnje</p>
+                            <div
+                                class="w-full space-y-3 text-sm bg-slate-50/90 dark:bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+                                <div class="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
+                                    <span>Kategorije:</span> <span class="font-bold">A, B, C, CE</span>
+                                </div>
+                                <div class="flex justify-between pt-1"><span>Kontakt:</span> <a href="tel:098867342"
+                                        class="font-bold hover:text-hakBlue">098/ 8673 42</a></div>
+                            </div>
                         </div>
                     </div>
 
                     <div
-                        class="bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-lg hover:-translate-y-1 transition duration-300">
-                        <div
-                            class="w-28 h-28 shrink-0 rounded-full mb-5 overflow-hidden shadow-md border-4 border-slate-50 dark:border-slate-700 bg-slate-200 dark:bg-slate-700">
-                            <img src="djelatnik.jpg" alt="Monika Turković" class="w-full h-full object-cover">
-                        </div>
-                        <h3 class="text-2xl font-extrabold mb-1">Monika Turković</h3>
-                        <p class="text-hakBlue dark:text-blue-400 font-semibold mb-6">Instruktor vožnje</p>
-                        <div
-                            class="w-full space-y-3 text-sm bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl text-slate-700 dark:text-slate-300">
-                            <div class="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
-                                <span>Kategorije:</span> <span class="font-bold">B</span>
+                        class="relative overflow-hidden bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-lg hover:-translate-y-1 transition duration-300">
+                        <div class="card-ribbon-bg"></div>
+                        <div class="relative z-10 flex flex-col items-center w-full">
+                            <div
+                                class="w-28 h-28 shrink-0 rounded-full mb-5 overflow-hidden shadow-md border-4 border-slate-50 dark:border-slate-700 bg-slate-200 dark:bg-slate-700">
+                                <img src="djelatnik.jpg" alt="Elvis Hadžić" class="w-full h-full object-cover">
                             </div>
-                            <div class="flex justify-between pt-1"><span>Kontakt:</span> <a href="tel:0958242927"
-                                    class="font-bold hover:text-hakBlue">095/ 824 2927</a></div>
+                            <h3 class="text-2xl font-extrabold mb-1">Elvis Hadžić</h3>
+                            <p class="text-hakBlue dark:text-blue-400 font-semibold mb-6">Instruktor vožnje</p>
+                            <div
+                                class="w-full space-y-3 text-sm bg-slate-50/90 dark:bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+                                <div class="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
+                                    <span>Kategorije:</span> <span class="font-bold">B, C, CE</span>
+                                </div>
+                                <div class="flex justify-between pt-1"><span>Kontakt:</span> <a href="tel:0976441275"
+                                        class="font-bold hover:text-hakBlue">097/ 644 1275</a></div>
+                            </div>
                         </div>
                     </div>
 
                     <div
-                        class="bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-lg hover:-translate-y-1 transition duration-300">
-                        <div
-                            class="w-28 h-28 shrink-0 rounded-full mb-5 overflow-hidden shadow-md border-4 border-slate-50 dark:border-slate-700 bg-slate-200 dark:bg-slate-700">
-                            <img src="djelatnik.jpg" alt="Vlado Vujnović" class="w-full h-full object-cover">
-                        </div>
-                        <h3 class="text-2xl font-extrabold mb-1">Vlado Vujnović</h3>
-                        <p class="text-hakBlue dark:text-blue-400 font-semibold mb-6">Instruktor vožnje</p>
-                        <div
-                            class="w-full space-y-3 text-sm bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl text-slate-700 dark:text-slate-300">
-                            <div class="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
-                                <span>Kategorije:</span> <span class="font-bold">B</span>
+                        class="relative overflow-hidden bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-lg hover:-translate-y-1 transition duration-300">
+                        <div class="card-ribbon-bg"></div>
+                        <div class="relative z-10 flex flex-col items-center w-full">
+                            <div
+                                class="w-28 h-28 shrink-0 rounded-full mb-5 overflow-hidden shadow-md border-4 border-slate-50 dark:border-slate-700 bg-slate-200 dark:bg-slate-700">
+                                <img src="djelatnik.jpg" alt="Monika Turković" class="w-full h-full object-cover">
                             </div>
-                            <div class="flex justify-between pt-1"><span>Kontakt:</span> <a href="tel:0989730125"
-                                    class="font-bold hover:text-hakBlue">098/ 9730 125</a></div>
+                            <h3 class="text-2xl font-extrabold mb-1">Monika Turković</h3>
+                            <p class="text-hakBlue dark:text-blue-400 font-semibold mb-6">Instruktor vožnje</p>
+                            <div
+                                class="w-full space-y-3 text-sm bg-slate-50/90 dark:bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+                                <div class="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
+                                    <span>Kategorije:</span> <span class="font-bold">B</span>
+                                </div>
+                                <div class="flex justify-between pt-1"><span>Kontakt:</span> <a href="tel:0958242927"
+                                        class="font-bold hover:text-hakBlue">095/ 824 2927</a></div>
+                            </div>
                         </div>
                     </div>
 
                     <div
-                        class="bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-lg hover:-translate-y-1 transition duration-300">
-                        <div
-                            class="w-28 h-28 shrink-0 rounded-full mb-5 overflow-hidden shadow-md border-4 border-slate-50 dark:border-slate-700 bg-slate-200 dark:bg-slate-700">
-                            <img src="djelatnik.jpg" alt="Marija Vlatković" class="w-full h-full object-cover">
+                        class="relative overflow-hidden bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-lg hover:-translate-y-1 transition duration-300">
+                        <div class="card-ribbon-bg"></div>
+                        <div class="relative z-10 flex flex-col items-center w-full">
+                            <div
+                                class="w-28 h-28 shrink-0 rounded-full mb-5 overflow-hidden shadow-md border-4 border-slate-50 dark:border-slate-700 bg-slate-200 dark:bg-slate-700">
+                                <img src="djelatnik.jpg" alt="Vlado Vujnović" class="w-full h-full object-cover">
+                            </div>
+                            <h3 class="text-2xl font-extrabold mb-1">Vlado Vujnović</h3>
+                            <p class="text-hakBlue dark:text-blue-400 font-semibold mb-6">Instruktor vožnje</p>
+                            <div
+                                class="w-full space-y-3 text-sm bg-slate-50/90 dark:bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+                                <div class="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
+                                    <span>Kategorije:</span> <span class="font-bold">B</span>
+                                </div>
+                                <div class="flex justify-between pt-1"><span>Kontakt:</span> <a href="tel:0989730125"
+                                        class="font-bold hover:text-hakBlue">098/ 9730 125</a></div>
+                            </div>
                         </div>
-                        <h3 class="text-2xl font-extrabold mb-1">Marija Vlatković</h3>
-                        <p class="text-hakBlue dark:text-blue-400 font-semibold mb-6">Administracija</p>
-                        <div
-                            class="w-full flex-1 flex items-center justify-center text-sm text-slate-500 bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl">
-                            Uvijek tu za sva vaša pitanja oko upisa i dokumentacije.
+                    </div>
+
+                    <div
+                        class="relative overflow-hidden bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center text-center hover:shadow-lg hover:-translate-y-1 transition duration-300">
+                        <div class="card-ribbon-bg"></div>
+                        <div class="relative z-10 flex flex-col items-center w-full h-full">
+                            <div
+                                class="w-28 h-28 shrink-0 rounded-full mb-5 overflow-hidden shadow-md border-4 border-slate-50 dark:border-slate-700 bg-slate-200 dark:bg-slate-700">
+                                <img src="djelatnik.jpg" alt="Marija Vlatković" class="w-full h-full object-cover">
+                            </div>
+                            <h3 class="text-2xl font-extrabold mb-1">Marija Vlatković</h3>
+                            <p class="text-hakBlue dark:text-blue-400 font-semibold mb-6">Administracija</p>
+                            <div
+                                class="w-full flex-1 flex items-center justify-center text-sm text-slate-700 dark:text-slate-300 bg-slate-50/90 dark:bg-slate-900/80 backdrop-blur-sm p-5 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+                                Uvijek tu za sva vaša pitanja oko upisa i dokumentacije.
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -986,135 +1059,322 @@
         let speed = 0;
         const maxSpeed = 0.5;
         const acceleration = 0.02;
-        const friction = 0.94;
+        const friction = 0.92;
 
         const carScale = 2.5;
 
         const heroCanvas = document.getElementById("heroCanvas");
         const heroEngine = new BABYLON.Engine(heroCanvas, true, { preserveDrawingBuffer: true, stencil: true });
 
+
+        let obstacles = []; // Stores cones and parked cars
+        let penaltyPoints = 0; // Tracks negative points
+        let collisionCooldown = false; // Prevents draining 60 points per second
+
+
+        async function createDrivingSchoolCourse(scene) {
+            const asphaltMat = new BABYLON.StandardMaterial("asphalt", scene);
+            asphaltMat.diffuseColor = new BABYLON.Color3(0.15, 0.16, 0.18);
+
+            const lineMat = new BABYLON.StandardMaterial("whiteLine", scene);
+            lineMat.emissiveColor = new BABYLON.Color3(1, 1, 1);
+
+            const coneMat = new BABYLON.StandardMaterial("coneColor", scene);
+            coneMat.diffuseColor = new BABYLON.Color3(1, 0.4, 0);
+
+            // --- THE X-RAY DEBUG MATERIAL ---
+            const debugMat = new BABYLON.StandardMaterial("debug", scene);
+            debugMat.diffuseColor = new BABYLON.Color3(1, 0, 0); // Red
+            debugMat.alpha = 0.4; // Semi-transparent glass
+
+            const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 200, height: 200 }, scene);
+            ground.material = asphaltMat;
+            new BABYLON.PhysicsAggregate(ground, BABYLON.PhysicsShapeType.BOX, { mass: 0, restitution: 0.1, friction: 2.0 }, scene);
+
+            function createCone(x, z) {
+                const cone = BABYLON.MeshBuilder.CreateCylinder("cone", { diameterTop: 0.1, diameterBottom: 0.6, height: 1.2 }, scene);
+                cone.position = new BABYLON.Vector3(x, 0.6, z);
+                cone.material = coneMat;
+                // REAL MASS: 5kg, high friction
+                new BABYLON.PhysicsAggregate(cone, BABYLON.PhysicsShapeType.CYLINDER, { mass: 5, restitution: 0.2, friction: 0.8 }, scene);
+                obstacles.push(cone);
+            }
+
+            function createLine(x, z, width, depth) {
+                const line = BABYLON.MeshBuilder.CreateBox("line", { width: width, height: 0.02, depth: depth }, scene);
+                line.position = new BABYLON.Vector3(x, 0.01, z);
+                line.material = lineMat;
+            }
+
+            async function spawnParkedCar(x, z, rotationY, colorHex) {
+                // TWEAK THESE NUMBERS IF THE RED BOX DOESNT FIT YOUR CAR:
+                const hitbox = BABYLON.MeshBuilder.CreateBox("parkedHitbox", { width: 4.5, height: 1.5, depth: 9.5 }, scene);
+                hitbox.position = new BABYLON.Vector3(x, 0.75, z);
+                hitbox.rotation.y = rotationY;
+
+                // Set to false when you are done tweaking!
+                hitbox.isVisible = false;
+                hitbox.material = debugMat;
+
+                // REAL MASS: 1200kg
+                hitbox.aggregate = new BABYLON.PhysicsAggregate(hitbox, BABYLON.PhysicsShapeType.BOX, { mass: 1200, restitution: 0.1, friction: 3.0 }, scene);
+                obstacles.push(hitbox);
+
+                try {
+                    const result = await BABYLON.SceneLoader.ImportMeshAsync("", "./", "car.glb", scene);
+                    const parkedCar = result.meshes[0];
+                    parkedCar.setParent(hitbox);
+                    if (typeof carScale !== 'undefined') parkedCar.scaling.scaleInPlace(carScale);
+                    parkedCar.position = new BABYLON.Vector3(0, -0.75, 0);
+
+                    result.meshes.forEach(mesh => {
+                        if (mesh.material && mesh.material.getClassName() === "PBRMaterial") {
+                            let newMat = mesh.material.clone(mesh.name + "_mat");
+                            if (newMat.albedoColor && (newMat.albedoColor.r > 0.1 || newMat.albedoColor.g > 0.1 || newMat.albedoColor.b > 0.1)) {
+                                newMat.albedoColor = BABYLON.Color3.FromHexString(colorHex);
+                            }
+                            mesh.material = newMat;
+                        }
+                    });
+                } catch (e) { }
+            }
+
+            // --- ZONES ---
+            for (let i = 0; i < 8; i++) createCone(0, -30 + (i * 12));
+
+            // Parallel
+            createLine(-30, 0, 0.2, 80);
+            createLine(-26, 10, 8, 0.2); createLine(-26, -2, 8, 0.2);
+            createLine(-26, -14, 8, 0.2); createLine(-26, -26, 8, 0.2);
+            createCone(-30, -2); createCone(-22, -2); createCone(-30, -14); createCone(-22, -14);
+            await spawnParkedCar(-26, 4, 0, "#e74c3c");
+            await spawnParkedCar(-26, -20, 0, "#3498db");
+
+            // Perpendicular (Vertical)
+            createLine(30, 45, 40, 0.2);
+            createLine(10, 37, 0.2, 16); createLine(20, 37, 0.2, 16);
+            createLine(30, 37, 0.2, 16); createLine(40, 37, 0.2, 16); createLine(50, 37, 0.2, 16);
+            createCone(10, 29); createCone(20, 29); createCone(30, 29); createCone(40, 29); createCone(50, 29);
+            await spawnParkedCar(15, 37, Math.PI, "#2ecc71");
+            await spawnParkedCar(35, 37, Math.PI, "#f1c40f");
+            await spawnParkedCar(45, 37, Math.PI, "#9b59b6");
+        }
+
+
         const createHeroScene = async () => {
             const scene = new BABYLON.Scene(heroEngine);
             heroScene = scene;
             scene.clearColor = getClearColor(isDarkMode);
 
-            showroomCamera = new BABYLON.ArcRotateCamera("showCam", -Math.PI / 2, Math.PI / 2.3, 16, BABYLON.Vector3.Zero(), scene);
-            showroomCamera.attachControl(heroCanvas, true);
-
-            chaseCamera = new BABYLON.FollowCamera("chaseCam", new BABYLON.Vector3(0, 5, -10), scene);
-            chaseCamera.radius = 18;
-            chaseCamera.heightOffset = 6;
-            chaseCamera.rotationOffset = 180;
-            chaseCamera.cameraAcceleration = 0.05;
-
             const hemiLight = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 1, 0), scene);
             hemiLight.intensity = 0.9;
 
-            const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 150, height: 150 }, scene);
-            ground.position.y = 0;
-            const gridMat = new BABYLON.StandardMaterial("grid", scene);
-            gridMat.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.3);
-            gridMat.alpha = 0;
-            ground.material = gridMat;
-
-            // HITBOX SETUP
-            carHitbox = BABYLON.MeshBuilder.CreateBox("carHitbox", { width: 1.5, height: 1, depth: 3.2 }, scene);
+            // 1. INSTANT SETUP: Create Hitbox & Cameras FIRST! (Prevents the crash)
+            carHitbox = BABYLON.MeshBuilder.CreateBox("carHitbox", { width: 5.0, height: 1.5, depth: 10.5 }, scene);
+            carHitbox.position = new BABYLON.Vector3(0, 0.75, -45);
             carHitbox.isVisible = false;
-            carHitbox.position = new BABYLON.Vector3(0, -8, -12);
 
+            chaseCamera = new BABYLON.FollowCamera("chaseCam", new BABYLON.Vector3(0, 5, -10), scene);
+            chaseCamera.radius = 18; chaseCamera.heightOffset = 6; chaseCamera.rotationOffset = 180;
             chaseCamera.lockedTarget = carHitbox;
 
+            const topDownCamera = new BABYLON.FreeCamera("topDownCam", new BABYLON.Vector3(0, 40, 0), scene);
+            // Lock the rotation so it ALWAYS looks straight down at the ground (90 degrees on X axis)
+            // Math.PI added to the Y-axis to spin it 180 degrees!
+            topDownCamera.rotation = new BABYLON.Vector3(Math.PI / 2, Math.PI, 0); 
+            topDownCamera.lockedTarget = carHitbox;
+
+            const reverseCamera = new BABYLON.FreeCamera("reverseCam", new BABYLON.Vector3(0, 1.5, -5), scene);
+            reverseCamera.parent = carHitbox; reverseCamera.rotation.y = Math.PI;
+
+            // --- HTML CAMERA BUTTONS LOGIC ---
+            const btnChase = document.getElementById("btn-cam-chase");
+            const btnTop = document.getElementById("btn-cam-top");
+            const btnRev = document.getElementById("btn-cam-rev");
+
+            // The unselected circular style (Dark Slate)
+            const defaultBtnClass = "bg-slate-800/90 backdrop-blur-md text-white w-11 h-11 rounded-full shadow-lg flex items-center justify-center hover:bg-slate-700 transition";
+            // The selected circular style (Blue)
+            const activeBtnClass = "bg-blue-600 text-white w-11 h-11 rounded-full shadow-lg flex items-center justify-center transition hover:bg-blue-500";
+
+            function resetBtnStyles() {
+                if (btnChase) btnChase.className = defaultBtnClass;
+                if (btnTop) btnTop.className = defaultBtnClass;
+                if (btnRev) btnRev.className = defaultBtnClass;
+            }
+
+            if (btnChase && btnTop && btnRev) {
+                btnChase.onclick = () => {
+                    resetBtnStyles();
+                    btnChase.className = activeBtnClass;
+                    scene.activeCamera = chaseCamera;
+                };
+                btnTop.onclick = () => {
+                    resetBtnStyles();
+                    btnTop.className = activeBtnClass;
+                    scene.activeCamera = topDownCamera;
+                };
+                btnRev.onclick = () => {
+                    resetBtnStyles();
+                    btnRev.className = activeBtnClass;
+                    scene.activeCamera = reverseCamera;
+                };
+            }
+
+            scene.activeCamera = chaseCamera;
+
+            // 2. ASYNC SETUP: Now we can safely await downloads while the camera exists!
+            const havokInstance = await HavokPhysics();
+            const havokPlugin = new BABYLON.HavokPlugin(true, havokInstance);
+            scene.enablePhysics(new BABYLON.Vector3(0, -9.81, 0), havokPlugin);
+
+            // Add physics to the player car
+            carHitbox.aggregate = new BABYLON.PhysicsAggregate(carHitbox, BABYLON.PhysicsShapeType.BOX, { mass: 1500, restitution: 0.1, friction: 0.5 }, scene);
+
+            // Build the course (Downloads parked cars)
+            await createDrivingSchoolCourse(scene);
+
+            // Download the player's car model
             try {
                 const result = await BABYLON.SceneLoader.ImportMeshAsync("", "./", "car.glb", scene);
                 carMesh = result.meshes[0];
-
                 carMesh.setParent(carHitbox);
-
-                // I REMOVED the addRotation line here! This flips it 180 degrees.
-
                 carMesh.scaling.scaleInPlace(carScale);
-                carMesh.position = new BABYLON.Vector3(0, -0.5, 0);
+                carMesh.position = new BABYLON.Vector3(0, -0.75, 0);
+            } catch (e) { console.warn("Fallback car used"); }
 
-            } catch (e) {
-                console.warn("Fallback cube used.");
-                carMesh = BABYLON.MeshBuilder.CreateBox("fallbackCar", { width: 1.5, height: 1, depth: 3 }, scene);
-                let mat = new BABYLON.StandardMaterial("m", scene);
-                mat.diffuseColor = new BABYLON.Color3(0.2, 0.5, 0.8);
-                carMesh.material = mat;
-                carMesh.setParent(carHitbox);
-                carMesh.position = new BABYLON.Vector3(0, 0, 0);
-            }
+            hasIntroFinished = true;
+            document.getElementById('introOverlay').classList.remove('opacity-0', 'pointer-events-none');
 
-            const boxMat = new BABYLON.StandardMaterial("boxMat", scene);
-            boxMat.diffuseColor = new BABYLON.Color3(0.2, 0.8, 0.2);
-
-            for (let i = 0; i < 20; i++) {
-                let box = BABYLON.MeshBuilder.CreateBox("box" + i, { size: 1.5 }, scene);
-                box.position = new BABYLON.Vector3((Math.random() - 0.5) * 60, 0.75, (Math.random() - 0.5) * 60);
-                if (box.position.length() < 10) box.position.x += 15;
-                box.material = boxMat;
-                box.isVisible = false;
-                boxes.push(box);
-            }
-
-            // SLIDE IN ANIMATION (1.5 seconds)
-            const frameRate = 60;
-            const endFrame = 90;
-
-            const yAnim = new BABYLON.Animation("slideUp", "position.y", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
-            yAnim.setKeys([{ frame: 0, value: -8 }, { frame: endFrame, value: 0.5 }]);
-
-            const zAnim = new BABYLON.Animation("slideForward", "position.z", frameRate, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
-            zAnim.setKeys([{ frame: 0, value: -12 }, { frame: endFrame, value: 0 }]);
-
-            const easingFunc = new BABYLON.QuarticEase();
-            easingFunc.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEOUT);
-            yAnim.setEasingFunction(easingFunc);
-            zAnim.setEasingFunction(easingFunc);
-
-            scene.beginDirectAnimation(carHitbox, [yAnim, zAnim], 0, endFrame, false, 1, () => {
-                hasIntroFinished = true;
-                document.getElementById('introOverlay').classList.remove('opacity-0', 'pointer-events-none');
-            });
-
-            // PHYSICS LOOP
+          // --- NEWTONIAN PHYSICS CONSTANTS ---
+            const mass = 1500;             
+            const gravity = 9.81;          
+            const normalForce = mass * gravity; 
+            
+            // Engine (THE TURBO UPGRADE)
+            const maxEngineForce = 35000;  // More than doubled the raw horsepower
+            const brakingForce = 45000;    // Upgraded the brakes so you don't fly off the map
+            const topSpeed = 55;           // Raised the speed cap to ~200 km/h
+            
+            // Friction Coefficients
+            const staticFriction = 1.2;    
+            const dynamicFriction = 0.6;   
+            
+            const turnTorque = 30000;
+            
+            // --- THE GAME LOOP (Sim-Cade Physics) ---
             scene.onBeforeRenderObservable.add(() => {
-                if (!isGameActive) {
-                    if (hasIntroFinished) carHitbox.rotation.y += 0.002;
-                    return;
+                if (!isGameActive) return;
+                
+                let dt = heroEngine.getDeltaTime() / 1000; 
+                if (dt === 0) return; // Prevent divide-by-zero on first frame
+                
+                let body = carHitbox.aggregate.body;
+
+                // 1. GET CURRENT VECTORS
+                let velocity = new BABYLON.Vector3();
+                body.getLinearVelocityToRef(velocity);
+                
+                let forward = carHitbox.getDirection(new BABYLON.Vector3(0, 0, 1));
+                let right = carHitbox.getDirection(new BABYLON.Vector3(1, 0, 0));
+
+                let forwardSpeed = BABYLON.Vector3.Dot(velocity, forward);
+                let lateralSpeed = BABYLON.Vector3.Dot(velocity, right);
+
+                // 2. GEARING & THRUST (Squared torque curve)
+                let driveForce = 0;
+                if (inputMap.w) {
+                    // By squaring the speed ratio, the car keeps 90% of its torque 
+                    // through the mid-range, only dropping off right before top speed!
+                    let speedRatio = Math.abs(forwardSpeed) / topSpeed;
+                    let speedFactor = Math.max(1.0 - (speedRatio * speedRatio), 0.0);
+                    driveForce = maxEngineForce * speedFactor; 
+                }
+                if (inputMap.s) {
+                    driveForce = (forwardSpeed > 0.5) ? -brakingForce : -maxEngineForce * 0.5;
                 }
 
-                if (inputMap.w) speed += acceleration;
-                if (inputMap.s) speed -= acceleration;
-                speed *= friction;
-                speed = Math.max(Math.min(speed, maxSpeed), -maxSpeed);
+                // 3. AIR DRAG & ROLLING RESISTANCE
+                let dragForce = (20 * forwardSpeed * Math.abs(forwardSpeed)) + (150 * forwardSpeed);
+                let netForwardForce = driveForce - dragForce;
+                let forwardImpulse = forward.scale(netForwardForce * dt);
 
-                if (Math.abs(speed) > 0.01) {
-                    let turn = 0.04 * (speed / maxSpeed);
-                    if (inputMap.a) carHitbox.rotation.y -= turn;
-                    if (inputMap.d) carHitbox.rotation.y += turn;
+                // 4. THE MAGIC: TIRE ADHESION & DRIFTING (Static vs Dynamic Friction)
+                // How much force is required to completely stop the car from sliding sideways this frame?
+                let requiredGripForce = (mass * -lateralSpeed) / dt;
+                
+                // What is the absolute maximum grip the tires can provide before breaking traction?
+                let maxStaticGrip = normalForce * staticFriction;
+                
+                let gripForce = 0;
+                if (Math.abs(requiredGripForce) <= maxStaticGrip) {
+                    // TIRES HAVE GRIP: The required force is within limits. 
+                    gripForce = requiredGripForce; 
+                } else {
+                    // TRACTION BROKEN: The car is turning too hard! It transitions to dynamic (sliding) friction.
+                    let slideDirection = Math.sign(requiredGripForce);
+                    gripForce = slideDirection * (normalForce * dynamicFriction);
                 }
 
-                let forward = new BABYLON.Vector3(Math.sin(carHitbox.rotation.y), 0, Math.cos(carHitbox.rotation.y));
-                carHitbox.position.x += forward.x * speed;
-                carHitbox.position.z += forward.z * speed;
+                let gripImpulse = right.scale(gripForce * dt);
 
-                carHitbox.position.x = Math.max(Math.min(carHitbox.position.x, 70), -70);
-                carHitbox.position.z = Math.max(Math.min(carHitbox.position.z, 70), -70);
-                carHitbox.position.y = 0.5;
+                // Apply forces
+                let totalImpulse = forwardImpulse.add(gripImpulse);
+                body.applyImpulse(totalImpulse, carHitbox.getAbsolutePosition());
 
-                for (let i = boxes.length - 1; i >= 0; i--) {
-                    let box = boxes[i];
-                    if (carHitbox.intersectsMesh(box, false)) {
-                        gameScore += 10;
-                        document.getElementById('scoreDisplay').innerText = gameScore;
+                // 5. STEERING KINEMATICS
+                // Steering gets heavier (less effective) at high speeds
+                let turnEffect = Math.max(1.0 - (Math.abs(forwardSpeed) / topSpeed), 0.2); 
+                
+                let steerInput = 0;
+                if (inputMap.d) steerInput = 1;
+                if (inputMap.a) steerInput = -1;
+                
+                let torque = steerInput * turnTorque * Math.sign(forwardSpeed || 1) * turnEffect * dt;
+                body.applyAngularImpulse(new BABYLON.Vector3(0, torque, 0));
 
-                        let flyAnim = new BABYLON.Animation("fly", "position.y", 30, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
-                        flyAnim.setKeys([{ frame: 0, value: 0.75 }, { frame: 30, value: 15 }]);
-                        box.animations.push(flyAnim);
-                        scene.beginDirectAnimation(box, [flyAnim], 0, 30, false, 1, () => box.dispose());
+                // 6. ANTI-SPIN DAMPENING
+                let currentAngular = new BABYLON.Vector3();
+                body.getAngularVelocityToRef(currentAngular);
+                if (steerInput === 0) {
+                    body.setAngularVelocity(currentAngular.scale(0.85)); // Auto-center
+                } else {
+                    body.setAngularVelocity(currentAngular.scale(0.95)); // Turn friction
+                }
 
-                        boxes.splice(i, 1);
+                // --- BOUNDS LOGIC ---
+                if (carHitbox.position.x > 90 || carHitbox.position.x < -90 || carHitbox.position.z > 90 || carHitbox.position.z < -90) {
+                    body.setLinearVelocity(velocity.scale(0.5));
+                    carHitbox.position.x = Math.max(Math.min(carHitbox.position.x, 90), -90);
+                    carHitbox.position.z = Math.max(Math.min(carHitbox.position.z, 90), -90);
+                }
+
+                // --- TOP DOWN CAMERA LOCK ---
+                if(typeof topDownCamera !== 'undefined') {
+                    topDownCamera.position.x = carHitbox.position.x;
+                    topDownCamera.position.z = carHitbox.position.z;
+                    topDownCamera.position.y = 40;
+                }
+
+                // --- SCORING SYSTEM ---
+                if (!collisionCooldown) {
+                    for (let i = 0; i < obstacles.length; i++) {
+                        if (carHitbox.intersectsMesh(obstacles[i], false)) {
+                            penaltyPoints += 10;
+                            let display = document.getElementById("scoreDisplay");
+                            if(display) display.innerText = penaltyPoints;
+                            
+                            let sContainer = document.getElementById("scoreContainer");
+                            if(sContainer) sContainer.classList.add("bg-red-100", "dark:bg-red-900/50");
+                            
+                            collisionCooldown = true;
+                            
+                            setTimeout(() => { 
+                                collisionCooldown = false; 
+                                if(sContainer) sContainer.classList.remove("bg-red-100", "dark:bg-red-900/50");
+                            }, 1000); 
+                            break; 
+                        }
                     }
                 }
             });
@@ -1125,8 +1385,6 @@
         createHeroScene().then(() => heroEngine.runRenderLoop(() => heroScene.render()));
 
         // --- 4. GAME CONTROLS ---
-        const btnStart = document.getElementById('btnStartGame');
-        const btnExit = document.getElementById('btnExitGame');
         const introOverlay = document.getElementById('introOverlay');
         const gameOverlay = document.getElementById('gameOverlay');
 
@@ -1151,33 +1409,48 @@
         };
         bindBtn('btnGas', 'w'); bindBtn('btnBrake', 's'); bindBtn('btnLeft', 'a'); bindBtn('btnRight', 'd');
 
-        btnStart.addEventListener('click', () => {
+        // --- 1. START GAME BUTTON ---
+        // (Make sure to replace 'btnPocniSada' with the actual ID of your start button if it's different!)
+        document.getElementById("btnStartGame").addEventListener("click", () => {
+            // Hide the main menu
+            document.getElementById("introOverlay").classList.add("opacity-0", "pointer-events-none");
+
+            // Show the game UI (Scoreboard, buttons)
+            document.getElementById("gameOverlay").classList.remove("opacity-0", "pointer-events-none");
+
+            // Turn on the W/A/S/D driving logic
             isGameActive = true;
-            introOverlay.classList.add('opacity-0', 'pointer-events-none');
-            gameOverlay.classList.remove('opacity-0', 'pointer-events-none');
-
-            heroScene.activeCamera = chaseCamera;
-            heroScene.getMeshByName("ground").material.alpha = 1;
-            boxes.forEach(b => b.isVisible = true);
-
-            carHitbox.rotation.y = 0;
-            speed = 0;
-            gameScore = 0;
-            document.getElementById('scoreDisplay').innerText = gameScore;
         });
 
-        btnExit.addEventListener('click', () => {
+        // --- 2. EXIT GAME BUTTON ("X") ---
+        document.getElementById("btnExitGame").addEventListener("click", () => {
+            // Turn off driving logic
             isGameActive = false;
-            introOverlay.classList.remove('opacity-0', 'pointer-events-none');
-            gameOverlay.classList.add('opacity-0', 'pointer-events-none');
 
-            heroScene.activeCamera = showroomCamera;
-            heroScene.getMeshByName("ground").material.alpha = 0;
-            boxes.forEach(b => b.isVisible = false);
+            // Hide the Game UI
+            document.getElementById("gameOverlay").classList.add("opacity-0", "pointer-events-none");
 
-            speed = 0;
-            inputMap.w = inputMap.a = inputMap.s = inputMap.d = false;
-            carHitbox.position = new BABYLON.Vector3(0, 0.5, 0);
+            // Bring the main menu back
+            document.getElementById("introOverlay").classList.remove("opacity-0", "pointer-events-none");
+
+            // Reset points
+            penaltyPoints = 0;
+            let scoreDisplay = document.getElementById("scoreDisplay");
+            if (scoreDisplay) scoreDisplay.innerText = "0";
+
+            // TELEPORT CAR BACK TO START
+            if (carHitbox && carHitbox.aggregate) {
+                // Stop all momentum instantly
+                carHitbox.aggregate.body.setLinearVelocity(BABYLON.Vector3.Zero());
+                carHitbox.aggregate.body.setAngularVelocity(BABYLON.Vector3.Zero());
+
+                // Move back to the starting coordinate and face forward
+                carHitbox.position = new BABYLON.Vector3(0, 0.75, -45);
+                carHitbox.rotation = new BABYLON.Vector3(0, 0, 0);
+
+                // Reset speed variable
+                speed = 0;
+            }
         });
 
         // --- 5. MODAL ENGINE ---
