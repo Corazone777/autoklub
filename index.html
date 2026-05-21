@@ -742,6 +742,7 @@
             </div>
         </section>
 
+        <!--
         <section id="galerija"
             class="py-24 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-200 dark:border-slate-800 theme-transition">
             <div class="max-w-[90rem] mx-auto px-6">
@@ -759,7 +760,7 @@
                 </div>
             </div>
         </section>
-
+    -->
         <section id="kontakt" class="py-24">
             <div class="max-w-[90rem] mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16">
                 <div>
@@ -813,7 +814,7 @@
             class="relative w-full max-w-6xl bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col lg:flex-row max-h-[90vh] transition-all duration-300">
 
             <button onclick="closeModal()"
-                class="absolute top-4 right-4 z-20 p-2 bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-md rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition shadow-sm">
+                class="absolute top-4 right-8 z-20 p-2 bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-md rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition shadow-sm">
                 <svg class="w-6 h-6 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor"
                     viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
@@ -1246,28 +1247,21 @@
             hasIntroFinished = true;
             document.getElementById('introOverlay').classList.remove('opacity-0', 'pointer-events-none');
 
-          // --- NEWTONIAN PHYSICS CONSTANTS ---
-            const mass = 1500;             
-            const gravity = 9.81;          
-            const normalForce = mass * gravity; 
+         // --- CAR SPECS ---
+            const maxMotorTorque = 40000;  
+            const brakeTorque = 60000;     
+            const maxSteeringAngle = 0.6;  
+            const topSpeed = 45;           
+            const wheelBase = 2.6; // Slightly shorter for snappier city driving
             
-            // Engine (THE TURBO UPGRADE)
-            const maxEngineForce = 35000;  // More than doubled the raw horsepower
-            const brakingForce = 45000;    // Upgraded the brakes so you don't fly off the map
-            const topSpeed = 55;           // Raised the speed cap to ~200 km/h
-            
-            // Friction Coefficients
-            const staticFriction = 1.2;    
-            const dynamicFriction = 0.6;   
-            
-            const turnTorque = 30000;
-            
-            // --- THE GAME LOOP (Sim-Cade Physics) ---
+            let currentSteeringAngle = 0;
+
+            // --- THE GAME LOOP (Velocity Projection) ---
             scene.onBeforeRenderObservable.add(() => {
                 if (!isGameActive) return;
                 
                 let dt = heroEngine.getDeltaTime() / 1000; 
-                if (dt === 0) return; // Prevent divide-by-zero on first frame
+                if (dt === 0) return; 
                 
                 let body = carHitbox.aggregate.body;
 
@@ -1281,67 +1275,74 @@
                 let forwardSpeed = BABYLON.Vector3.Dot(velocity, forward);
                 let lateralSpeed = BABYLON.Vector3.Dot(velocity, right);
 
-                // 2. GEARING & THRUST (Squared torque curve)
+                let isBraking = inputMap[" "]; // Spacebar for Handbrake
+
+                // 2. TIRE GRIP (ERASE THE DRIFT)
+                // Instead of guessing friction forces, we mathematically delete the sideways slide.
+                // 0.98 means 98% of sliding is erased instantly. You are on rails.
+                let grip = isBraking ? 0.90 : 0.98; 
+                
+                // Subtract the sideways movement from the actual velocity
+                velocity.subtractInPlace(right.scale(lateralSpeed * grip));
+
+                // 3. ENGINE & BRAKES
                 let driveForce = 0;
                 if (inputMap.w) {
-                    // By squaring the speed ratio, the car keeps 90% of its torque 
-                    // through the mid-range, only dropping off right before top speed!
-                    let speedRatio = Math.abs(forwardSpeed) / topSpeed;
+                    let speedRatio = Math.min(Math.abs(forwardSpeed) / topSpeed, 1.0);
                     let speedFactor = Math.max(1.0 - (speedRatio * speedRatio), 0.0);
-                    driveForce = maxEngineForce * speedFactor; 
+                    driveForce = maxMotorTorque * speedFactor; 
                 }
                 if (inputMap.s) {
-                    driveForce = (forwardSpeed > 0.5) ? -brakingForce : -maxEngineForce * 0.5;
+                    driveForce = (forwardSpeed > 0.5) ? -brakeTorque : -maxMotorTorque * 0.5;
+                }
+                if (isBraking) {
+                    driveForce = -Math.sign(forwardSpeed) * brakeTorque;
                 }
 
-                // 3. AIR DRAG & ROLLING RESISTANCE
-                let dragForce = (20 * forwardSpeed * Math.abs(forwardSpeed)) + (150 * forwardSpeed);
+                // Air Drag & Net Force
+                let dragForce = (25 * forwardSpeed * Math.abs(forwardSpeed)) + (150 * forwardSpeed);
                 let netForwardForce = driveForce - dragForce;
-                let forwardImpulse = forward.scale(netForwardForce * dt);
+                
+                // Apply the engine's acceleration directly to our clean velocity vector
+                let acceleration = (netForwardForce / 1500) * dt; // F = ma
+                velocity.addInPlace(forward.scale(acceleration));
 
-                // 4. THE MAGIC: TIRE ADHESION & DRIFTING (Static vs Dynamic Friction)
-                // How much force is required to completely stop the car from sliding sideways this frame?
-                let requiredGripForce = (mass * -lateralSpeed) / dt;
-                
-                // What is the absolute maximum grip the tires can provide before breaking traction?
-                let maxStaticGrip = normalForce * staticFriction;
-                
-                let gripForce = 0;
-                if (Math.abs(requiredGripForce) <= maxStaticGrip) {
-                    // TIRES HAVE GRIP: The required force is within limits. 
-                    gripForce = requiredGripForce; 
-                } else {
-                    // TRACTION BROKEN: The car is turning too hard! It transitions to dynamic (sliding) friction.
-                    let slideDirection = Math.sign(requiredGripForce);
-                    gripForce = slideDirection * (normalForce * dynamicFriction);
+                // Stop jittering when fully parked
+                if (Math.abs(forwardSpeed) < 0.5 && !inputMap.w && !inputMap.s) {
+                    velocity.scaleInPlace(0.9); 
                 }
 
-                let gripImpulse = right.scale(gripForce * dt);
+                // APPLY THE NEW PERFECT VELOCITY TO THE PHYSICS ENGINE
+                body.setLinearVelocity(velocity);
 
-                // Apply forces
-                let totalImpulse = forwardImpulse.add(gripImpulse);
-                body.applyImpulse(totalImpulse, carHitbox.getAbsolutePosition());
+                // 4. SPEED-SENSITIVE STEERING
+                let speedRatioForSteer = Math.min(Math.abs(forwardSpeed) / topSpeed, 1.0);
+                let currentMaxSteer = maxSteeringAngle * (1.0 - (speedRatioForSteer * 0.5)); 
 
-                // 5. STEERING KINEMATICS
-                // Steering gets heavier (less effective) at high speeds
-                let turnEffect = Math.max(1.0 - (Math.abs(forwardSpeed) / topSpeed), 0.2); 
+                if (inputMap.d) {
+                    currentSteeringAngle = Math.min(currentSteeringAngle + 3.5 * dt, currentMaxSteer);
+                } else if (inputMap.a) {
+                    currentSteeringAngle = Math.max(currentSteeringAngle - 3.5 * dt, -currentMaxSteer);
+                } else {
+                    currentSteeringAngle *= 0.80; // Snappy auto-center
+                }
+
+                // 5. ACKERMANN KINEMATIC ROTATION
+                let desiredTurnRate = (forwardSpeed / wheelBase) * Math.tan(currentSteeringAngle);
                 
-                let steerInput = 0;
-                if (inputMap.d) steerInput = 1;
-                if (inputMap.a) steerInput = -1;
-                
-                let torque = steerInput * turnTorque * Math.sign(forwardSpeed || 1) * turnEffect * dt;
-                body.applyAngularImpulse(new BABYLON.Vector3(0, torque, 0));
-
-                // 6. ANTI-SPIN DAMPENING
                 let currentAngular = new BABYLON.Vector3();
                 body.getAngularVelocityToRef(currentAngular);
-                if (steerInput === 0) {
-                    body.setAngularVelocity(currentAngular.scale(0.85)); // Auto-center
-                } else {
-                    body.setAngularVelocity(currentAngular.scale(0.95)); // Turn friction
-                }
+                
+                // Keep suspension bounce (X and Z), but take absolute control of steering (Y)
+                body.setAngularVelocity(new BABYLON.Vector3(currentAngular.x, desiredTurnRate, currentAngular.z));
 
+                // 6. ANTI-ROLL BARS
+                let rollAngle = carHitbox.rotationQuaternion ? carHitbox.rotationQuaternion.toEulerAngles().z : carHitbox.rotation.z;
+                if (Math.abs(rollAngle) > 0.05) {
+                    let antiRollForce = -rollAngle * 25000 * dt;
+                    body.applyAngularImpulse(new BABYLON.Vector3(0, 0, antiRollForce));
+                }
+                
                 // --- BOUNDS LOGIC ---
                 if (carHitbox.position.x > 90 || carHitbox.position.x < -90 || carHitbox.position.z > 90 || carHitbox.position.z < -90) {
                     body.setLinearVelocity(velocity.scale(0.5));
